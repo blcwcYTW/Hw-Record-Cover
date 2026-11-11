@@ -26,6 +26,77 @@
       margin: 0 auto;
     }
 
+    /* ================= 🔒 登入遮罩排版樣式 ================= */
+    #login-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .login-card {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+
+    .login-card h2 {
+      margin-top: 0;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .login-field {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .login-field label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+
+    .login-input {
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 15px;
+      outline: none;
+      transition: border 0.15s;
+    }
+
+    .login-input:focus {
+      border-color: var(--primary);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 11px;
+      font-size: 15px;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.15s;
+    }
+
+    .login-btn:hover { background-color: var(--primary-hover); }
+
+    /* ================= 後台控制排版樣式 ================= */
     .teacher-bar {
       background: #1e293b;
       color: white;
@@ -199,7 +270,7 @@
       font-size: 13px;
     }
 
-    /* ================= A4 智慧分頁列印專用樣式 ================= */
+    /* ================= A4 列印排版樣式 ================= */
     #print-area {
       display: none;
       background: white;
@@ -324,18 +395,38 @@
 </head>
 <body>
 
-  <div class="container">
+  <!-- 🔒 安全登入頁面遮罩 -->
+  <div id="login-overlay">
+    <div class="login-card">
+      <h2>🏫 教師後台系統</h2>
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 24px;">請輸入您的老師代號與安全 PIN 碼</p>
+      
+      <div class="login-field">
+        <label for="loginTeacher">老師英文代號 (如: YTW)</label>
+        <input type="text" id="loginTeacher" class="login-input" placeholder="YTW" style="text-transform: uppercase;">
+      </div>
+      
+      <div class="login-field">
+        <label for="loginPin">個人安全 PIN 碼</label>
+        <input type="password" id="loginPin" class="login-input" placeholder="••••">
+      </div>
+      
+      <div id="loginErrorMsg" style="color: #ef4444; font-size: 13px; text-align: left; margin-bottom: 10px; display: none;"></div>
+      
+      <button class="login-btn" onclick="handleLogin()">驗證登入</button>
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 16px;">首次登入之新代號將自動以此 PIN 碼註冊新帳號</div>
+    </div>
+  </div>
+
+  <div class="container" id="main-content" style="display: none;">
     <div class="no-print">
-      <!-- 👤 老師身份登入／切換頂部列 -->
+      <!-- 👤 頂部登入資訊與登出列 -->
       <div class="teacher-bar">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 14.5px; font-weight: bold;">👤 目前登入老師代號：</span>
-          <input type="text" id="activeTeacherInput" style="width: 80px; text-transform: uppercase; font-weight: bold; text-align: center; font-size: 14px; padding: 4px; border-radius: 4px; border: none;" value="YTW">
-          <button class="btn-primary" onclick="changeTeacher()" style="padding: 5px 12px; font-size: 13px; background: #3b82f6;">切換身份</button>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 14.5px; font-weight: bold;">👤 目前登入老師：</span>
+          <span id="activeTeacherName" style="background: #3b82f6; color: white; padding: 3px 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">-</span>
         </div>
-        <div style="font-size: 12.5px; color: #cbd5e1;">
-          💡 每位老師擁有各自獨立的派發材料與設定清單，資料互不干擾。
-        </div>
+        <button onclick="handleLogout()" style="padding: 5px 12px; font-size: 13px; background: #ef4444; color: white; font-weight: bold;">登出系統</button>
       </div>
 
       <h1>📚 教學材料紀錄 及 功課測驗封面生成 <span id="statusIndicator" class="status-badge">連線中...</span></h1>
@@ -443,13 +534,13 @@
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <span>老師代號：</span>
-            <input type="text" id="teacherInitials" value="YTW" style="width: 55px; padding: 4px 6px;" onchange="saveCoverSettings()">
+            <input type="text" id="teacherInitials" value="YTW" style="width: 55px; padding: 4px 6px;" onchange="saveCoverSettings()" readonly>
             <button onclick="fetchSheetData()" style="background: white; border: 1px solid #cbd5e1; padding: 4px 8px;">🔄 重新整理</button>
           </div>
         </div>
 
         <!-- 封面語言與列印控制列 -->
-        <div style="background: #f1f5f9; padding: 12px 14px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="background: #f1f5f9; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div style="display: flex; gap: 15px; align-items: center;">
             <strong>🌐 封面語言：</strong>
             <label><input type="radio" name="coverLang" value="EN" checked onchange="saveCoverSettings()"> 英文版</label>
@@ -493,7 +584,7 @@
             </tr>
           </thead>
           <tbody id="materialList">
-            <tr><td colspan="11" style="text-align: center;">載入資料中...</td></tr>
+            <tr><td colspan="11" style="text-align: center;">請先登入。</td></tr>
           </tbody>
         </table>
       </div>
@@ -506,10 +597,8 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwONa6Wyw8NU3tJS33CVQgCJe4SQ0NMDR4NRwqHbJe4jlQTvtDDNem2bzcA5okjHxhY/exec";
 
-    // 老師身份初始化 (優先讀取上次本地登入紀錄)
-    let currentTeacher = (localStorage.getItem('app_current_teacher') || "YTW").trim().toUpperCase();
-    document.getElementById('activeTeacherInput').value = currentTeacher;
-    document.getElementById('teacherInitials').value = currentTeacher;
+    let currentTeacher = "";
+    let currentPin = "";
 
     let materials = [];
     let classes = ["1A", "1B", "6B"];
@@ -517,25 +606,219 @@
     let subjects = ["數學科 / Mathematics", "英國語文科 / English", "中國語文科 / Chinese"];
     let types = ["工作紙", "筆記", "測驗卷", "功課練習", "小測"];
 
-    const savedLang = localStorage.getItem('cfg_lang') || "EN";
-    document.querySelector(`input[name="coverLang"][value="${savedLang}"]`).checked = true;
-    document.getElementById('itemDate').valueAsDate = new Date();
-
     let limitFirstPage = parseInt(localStorage.getItem('cfg_limit_first') || 18);
     let limitNextPage = parseInt(localStorage.getItem('cfg_limit_next') || 26);
     document.getElementById('inputFirstPage').value = limitFirstPage;
     document.getElementById('inputNextPage').value = limitNextPage;
 
-    // 切換老師身份
-    function changeTeacher() {
-      const val = document.getElementById('activeTeacherInput').value.trim().toUpperCase();
-      if (!val) return alert('請輸入老師代號！');
-      currentTeacher = val;
-      localStorage.setItem('app_current_teacher', currentTeacher);
-      document.getElementById('teacherInitials').value = currentTeacher;
-      fetchSheetData();
+    // ================= 🔒 驗證與登入核心邏輯 =================
+    async function handleLogin() {
+      const teacher = document.getElementById('loginTeacher').value.trim().toUpperCase();
+      const pin = document.getElementById('loginPin').value.trim();
+      const errorMsg = document.getElementById('loginErrorMsg');
+
+      if (!teacher || !pin) {
+        errorMsg.innerText = "請完整填寫代號與 PIN 碼！";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      errorMsg.style.display = "none";
+      setStatus("🔑 驗證中...", "#2563eb");
+
+      try {
+        const response = await fetch(`${SCRIPT_URL}?teacher=${encodeURIComponent(teacher)}&pin=${encodeURIComponent(pin)}`, {
+          method: 'GET',
+          mode: 'cors',
+          redirect: 'follow'
+        });
+        const data = await response.json();
+
+        if (data.status === "auth_failed") {
+          errorMsg.innerText = data.message;
+          errorMsg.style.display = "block";
+          setStatus("❌ 驗證失敗", "#ef4444");
+          return;
+        }
+
+        // 登入成功，快取密鑰並展示介面
+        currentTeacher = teacher;
+        currentPin = pin;
+        materials = data.materials || [];
+        
+        if (data.settings) {
+          classes = data.settings.classes || classes;
+          periods = data.settings.periods || periods;
+          subjects = data.settings.subjects || subjects;
+          types = data.settings.types || types;
+        }
+
+        // 切換介面顯示
+        document.getElementById('login-overlay').style.display = "none";
+        document.getElementById('main-content').style.display = "block";
+        document.getElementById('activeTeacherName').innerText = currentTeacher;
+        document.getElementById('teacherInitials').value = currentTeacher;
+
+        renderSettings();
+        renderTable();
+        setStatus(`✅ 歡迎登入，${currentTeacher}`, "#16a34a");
+
+      } catch (err) {
+        console.error(err);
+        errorMsg.innerText = "連線失敗，請確認 Apps Script 部署與權限！";
+        errorMsg.style.display = "block";
+        setStatus("❌ 連線異常", "#ef4444");
+      }
     }
 
+    function handleLogout() {
+      currentTeacher = "";
+      currentPin = "";
+      document.getElementById('loginPin').value = "";
+      document.getElementById('main-content').style.display = "none";
+      document.getElementById('login-overlay').style.display = "flex";
+      setStatus("🔒 已登出", "#64748b");
+    }
+
+    // 當在後台點擊重新整理
+    async function fetchSheetData() {
+      setStatus(`🔄 同步中...`, "#2563eb");
+      try {
+        const response = await fetch(`${SCRIPT_URL}?teacher=${encodeURIComponent(currentTeacher)}&pin=${encodeURIComponent(currentPin)}`, {
+          method: 'GET',
+          mode: 'cors',
+          redirect: 'follow'
+        });
+        const data = await response.json();
+        materials = data.materials || [];
+        if (data.settings) {
+          classes = data.settings.classes || classes;
+          periods = data.settings.periods || periods;
+          subjects = data.settings.subjects || subjects;
+          types = data.settings.types || types;
+        }
+        renderSettings();
+        renderTable();
+        setStatus(`✅ 已同步最新資料`, "#16a34a");
+      } catch (e) {
+        setStatus("❌ 同步失敗", "#ef4444");
+      }
+    }
+
+    // 同步設定 (安全傳遞個人 PIN 碼供後端驗證)
+    async function syncSettingsToSheet() {
+      setStatus(`⏳ 儲存設定中...`, "#2563eb");
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: "saveSettings",
+            teacher: currentTeacher,
+            pin: currentPin,
+            settings: { classes, periods, subjects, types }
+          })
+        });
+        setStatus(`✅ 設定已儲存`, "#16a34a");
+      } catch (err) {
+        setStatus("❌ 設定儲存失敗", "#ef4444");
+      }
+    }
+
+    // 新增材料 (安全傳遞個人 PIN 碼供後端驗證)
+    async function addMaterial() {
+      const name = document.getElementById('itemName').value.trim();
+      if (!name) return alert('請填寫項目名稱！');
+
+      const newItem = {
+        id: Date.now(),
+        targetClass: document.getElementById('itemClass').value,
+        period: document.getElementById('itemPeriod').value,
+        category: document.getElementById('itemCategory').value,
+        date: document.getElementById('itemDate').value,
+        type: document.getElementById('itemType').value,
+        unit: document.getElementById('itemUnit').value.trim() || '-',
+        name: name,
+        collected: false,
+        graded: false,
+        selected: true
+      };
+
+      const addBtn = document.getElementById('addBtn');
+      addBtn.disabled = true;
+      setStatus("⏳ 上傳中...", "#2563eb");
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: "add", teacher: currentTeacher, pin: currentPin, item: newItem })
+        });
+        materials.push(newItem);
+        renderTable();
+        document.getElementById('itemName').value = '';
+        setStatus(`✅ 已儲存`, "#16a34a");
+      } catch (err) {
+        alert('儲存失敗');
+        setStatus("❌ 儲存失敗", "#ef4444");
+      } finally {
+        addBtn.disabled = false;
+      }
+    }
+
+    // 刪除材料
+    async function deleteMaterial(id) {
+      if (!confirm('確定要從雲端刪除這筆紀錄嗎？')) return;
+      setStatus("⏳ 刪除中...", "#2563eb");
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: "delete", teacher: currentTeacher, pin: currentPin, id: id })
+        });
+        materials = materials.filter(m => m.id != id);
+        renderTable();
+        setStatus("✅ 刪除完成", "#16a34a");
+      } catch (err) {
+        setStatus("❌ 刪除失敗", "#ef4444");
+      }
+    }
+
+    async function toggleCollected(id, checkbox) {
+      const item = materials.find(m => m.id == id);
+      if (item) item.collected = checkbox.checked;
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: "toggleStatus", teacher: currentTeacher, pin: currentPin, id: id, field: "collected", value: checkbox.checked })
+        });
+      } catch (e) {}
+    }
+
+    async function toggleGraded(id, checkbox) {
+      const item = materials.find(m => m.id == id);
+      if (item) item.graded = checkbox.checked;
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: "toggleStatus", teacher: currentTeacher, pin: currentPin, id: id, field: "graded", value: checkbox.checked })
+        });
+      } catch (e) {}
+    }
+
+    // (剩餘基礎設定 Stepper 滑桿運算函數及 Table 渲染功能與先前相同...)
     function stepValue(type, offset) {
       const inputEl = document.getElementById('input' + type);
       let val = parseInt(inputEl.value) || 0;
@@ -572,161 +855,6 @@
       inputEl.value = val;
     }
 
-    function setStatus(text, color = '#64748b') {
-      const badge = document.getElementById('statusIndicator');
-      badge.innerText = text;
-      badge.style.color = color;
-    }
-
-    function saveCoverSettings() {
-      localStorage.setItem('cfg_teacher', document.getElementById('teacherInitials').value);
-      localStorage.setItem('cfg_lang', document.querySelector('input[name="coverLang"]:checked').value);
-      localStorage.setItem('cfg_subject', document.getElementById('viewSubjectFilter').value);
-    }
-
-    // 🎯 依據目前老師身份載入資料
-    async function fetchSheetData() {
-      if (!SCRIPT_URL) return setStatus("⚠️ 請設定 SCRIPT_URL", "#ef4444");
-      setStatus(`🔄 同步 [${currentTeacher}] 資料中...`, "#2563eb");
-      try {
-        const response = await fetch(`${SCRIPT_URL}?teacher=${encodeURIComponent(currentTeacher)}`, {
-          method: 'GET',
-          mode: 'cors',
-          redirect: 'follow'
-        });
-        const data = await response.json();
-        
-        if (data.settings) {
-          classes = (data.settings.classes && data.settings.classes.length > 0) ? data.settings.classes : ["1A", "1B", "6B"];
-          periods = (data.settings.periods && data.settings.periods.length > 0) ? data.settings.periods : ["1st Term Test", "2nd Term Test", "模擬考試一"];
-          subjects = (data.settings.subjects && data.settings.subjects.length > 0) ? data.settings.subjects : ["數學科 / Mathematics", "英國語文科 / English", "中國語文科 / Chinese"];
-          types = (data.settings.types && data.settings.types.length > 0) ? data.settings.types : ["工作紙", "筆記", "測驗卷", "功課練習", "小測"];
-        }
-
-        materials = data.materials || [];
-        renderSettings();
-        renderTable();
-        setStatus(`✅ 已同步 [${currentTeacher}] 雲端資料`, "#16a34a");
-      } catch (err) {
-        console.error(err);
-        setStatus("❌ 連線失敗 (F12)", "#ef4444");
-      }
-    }
-
-    // 🎯 同步儲存目前老師專屬的清單設定
-    async function syncSettingsToSheet() {
-      setStatus(`⏳ 儲存 [${currentTeacher}] 設定中...`, "#2563eb");
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: "saveSettings",
-            teacher: currentTeacher,
-            settings: { classes, periods, subjects, types }
-          })
-        });
-        setStatus(`✅ [${currentTeacher}] 設定已同步至雲端`, "#16a34a");
-      } catch (err) {
-        console.error(err);
-        setStatus("❌ 設定儲存失敗", "#ef4444");
-      }
-    }
-
-    // 新增材料 (綁定目前老師代號)
-    async function addMaterial() {
-      const name = document.getElementById('itemName').value.trim();
-      if (!name) return alert('請填寫項目名稱！');
-
-      const newItem = {
-        id: Date.now(),
-        targetClass: document.getElementById('itemClass').value,
-        period: document.getElementById('itemPeriod').value,
-        category: document.getElementById('itemCategory').value,
-        date: document.getElementById('itemDate').value,
-        type: document.getElementById('itemType').value,
-        unit: document.getElementById('itemUnit').value.trim() || '-',
-        name: name,
-        collected: false,
-        graded: false,
-        selected: true
-      };
-
-      const addBtn = document.getElementById('addBtn');
-      addBtn.disabled = true;
-      setStatus("⏳ 上傳中...", "#2563eb");
-
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "add", teacher: currentTeacher, item: newItem })
-        });
-        materials.push(newItem);
-        renderTable();
-        document.getElementById('itemName').value = '';
-        setStatus(`✅ 已儲存至 [${currentTeacher}] 雲端`, "#16a34a");
-      } catch (err) {
-        alert('儲存失敗，請檢查網路連線或 Apps Script 設定');
-        setStatus("❌ 儲存失敗", "#ef4444");
-      } finally {
-        addBtn.disabled = false;
-      }
-    }
-
-    // 刪除材料
-    async function deleteMaterial(id) {
-      if (!confirm('確定要從雲端刪除這筆紀錄嗎？')) return;
-      setStatus("⏳ 刪除中...", "#2563eb");
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "delete", teacher: currentTeacher, id: id })
-        });
-        materials = materials.filter(m => m.id != id);
-        renderTable();
-        setStatus("✅ 刪除完成", "#16a34a");
-      } catch (err) {
-        alert('刪除失敗');
-        setStatus("❌ 刪除失敗", "#ef4444");
-      }
-    }
-
-    async function toggleCollected(id, checkbox) {
-      const item = materials.find(m => m.id == id);
-      if (item) item.collected = checkbox.checked;
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "toggleStatus", teacher: currentTeacher, id: id, field: "collected", value: checkbox.checked })
-        });
-      } catch (e) { console.error("狀態同步失敗", e); }
-    }
-
-    async function toggleGraded(id, checkbox) {
-      const item = materials.find(m => m.id == id);
-      if (item) item.graded = checkbox.checked;
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "toggleStatus", teacher: currentTeacher, id: id, field: "graded", value: checkbox.checked })
-        });
-      } catch (e) { console.error("狀態同步失敗", e); }
-    }
-
     function toggleSelect(id, checkbox) {
       const item = materials.find(m => m.id == id);
       if (item) item.selected = checkbox.checked;
@@ -735,13 +863,11 @@
     function toggleSelectAll(masterCheckbox) {
       const currentClass = document.getElementById('viewClassFilter').value;
       const currentPeriod = document.getElementById('viewPeriodFilter').value;
-
       const visibleItems = materials.filter(m => {
         const matchClass = (m.targetClass === '所有班別' || m.targetClass === currentClass);
         const matchPeriod = (currentPeriod === '全部時期' || m.period === '全年' || m.period === currentPeriod);
         return matchClass && matchPeriod;
       });
-
       visibleItems.forEach(item => item.selected = masterCheckbox.checked);
       renderTable();
     }
@@ -766,7 +892,6 @@
       filtered.forEach(item => {
         const tr = document.createElement('tr');
         const periodDisplay = item.period ? (item.period === '全年' ? '🌟 全年' : item.period) : '<span style="color:#94a3b8;">無</span>';
-        
         let catColor = "#2563eb";
         if (item.category === "測驗") catColor = "#dc2626";
         if (item.category === "其他") catColor = "#4b5563";
@@ -791,101 +916,56 @@
     function addClass() {
       const val = document.getElementById('newClassInput').value.trim();
       if (val && !classes.includes(val)) {
-        classes.push(val);
-        renderSettings();
-        syncSettingsToSheet();
+        classes.push(val); renderSettings(); syncSettingsToSheet();
       }
       document.getElementById('newClassInput').value = '';
     }
-
     function removeClass(c) {
       if (classes.length <= 1) return alert('請至少保留一個班別');
-      classes = classes.filter(x => x !== c);
-      renderSettings();
-      renderTable();
-      syncSettingsToSheet();
+      classes = classes.filter(x => x !== c); renderSettings(); renderTable(); syncSettingsToSheet();
     }
-
     function addPeriod() {
       const val = document.getElementById('newPeriodInput').value.trim();
       if (val && !periods.includes(val)) {
-        periods.push(val);
-        renderSettings();
-        syncSettingsToSheet();
+        periods.push(val); renderSettings(); syncSettingsToSheet();
       }
       document.getElementById('newPeriodInput').value = '';
     }
-
     function removePeriod(p) {
       if (periods.length <= 1) return alert('請至少保留一個 Period');
-      periods = periods.filter(x => x !== p);
-      renderSettings();
-      renderTable();
-      syncSettingsToSheet();
+      periods = periods.filter(x => x !== p); renderSettings(); renderTable(); syncSettingsToSheet();
     }
-
     function addSubject() {
       const val = document.getElementById('newSubjectInput').value.trim();
       if (val && !subjects.includes(val)) {
-        subjects.push(val);
-        renderSettings();
-        syncSettingsToSheet();
+        subjects.push(val); renderSettings(); syncSettingsToSheet();
       }
       document.getElementById('newSubjectInput').value = '';
     }
-
     function removeSubject(s) {
       if (subjects.length <= 1) return alert('請至少保留一個科目');
-      subjects = subjects.filter(x => x !== s);
-      renderSettings();
-      syncSettingsToSheet();
+      subjects = subjects.filter(x => x !== s); renderSettings(); syncSettingsToSheet();
     }
-
     function addType() {
       const val = document.getElementById('newTypeInput').value.trim();
       if (val && !types.includes(val)) {
-        types.push(val);
-        renderSettings();
-        syncSettingsToSheet();
+        types.push(val); renderSettings(); syncSettingsToSheet();
       }
       document.getElementById('newTypeInput').value = '';
     }
-
     function removeType(t) {
       if (types.length <= 1) return alert('請至少保留一種材料類型');
-      types = types.filter(x => x !== t);
-      renderSettings();
-      syncSettingsToSheet();
+      types = types.filter(x => x !== t); renderSettings(); syncSettingsToSheet();
     }
 
     function renderSettings() {
-      document.getElementById('classListTags').innerHTML = classes.map(c => `
-        <span class="tag">${c} <span class="del" onclick="removeClass('${c}')">&times;</span></span>
-      `).join('');
+      document.getElementById('classListTags').innerHTML = classes.map(c => `<span class="tag">${c} <span class="del" onclick="removeClass('${c}')">&times;</span></span>`).join('');
+      document.getElementById('periodListTags').innerHTML = periods.map(p => `<span class="tag">${p} <span class="del" onclick="removePeriod('${p}')">&times;</span></span>`).join('');
+      document.getElementById('subjectListTags').innerHTML = subjects.map(s => `<span class="tag">${s} <span class="del" onclick="removeSubject('${s}')">&times;</span></span>`).join('');
+      document.getElementById('typeListTags').innerHTML = types.map(t => `<span class="tag">${t} <span class="del" onclick="removeType('${t}')">&times;</span></span>`).join('');
 
-      document.getElementById('periodListTags').innerHTML = periods.map(p => `
-        <span class="tag">${p} <span class="del" onclick="removePeriod('${p}')">&times;</span></span>
-      `).join('');
-
-      document.getElementById('subjectListTags').innerHTML = subjects.map(s => `
-        <span class="tag">${s} <span class="del" onclick="removeSubject('${s}')">&times;</span></span>
-      `).join('');
-
-      document.getElementById('typeListTags').innerHTML = types.map(t => `
-        <span class="tag">${t} <span class="del" onclick="removeType('${t}')">&times;</span></span>
-      `).join('');
-
-      document.getElementById('itemClass').innerHTML = `
-        <option value="所有班別">✨ 所有班別通用</option>
-        ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
-      `;
-
-      document.getElementById('itemPeriod').innerHTML = `
-        <option value="全年">🌟 全年 (Whole Year)</option>
-        ${periods.map(p => `<option value="${p}">${p}</option>`).join('')}
-        <option value="">無 (留空)</option>
-      `;
-
+      document.getElementById('itemClass').innerHTML = `<option value="所有班別">✨ 所有班別通用</option>` + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+      document.getElementById('itemPeriod').innerHTML = `<option value="全年">🌟 全年 (Whole Year)</option>` + periods.map(p => `<option value="${p}">${p}</option>`).join('') + `<option value="">無 (留空)</option>`;
       document.getElementById('itemType').innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
 
       const viewFilter = document.getElementById('viewClassFilter');
@@ -895,20 +975,13 @@
 
       const periodFilter = document.getElementById('viewPeriodFilter');
       const currentSelectedPeriod = periodFilter.value || periods[0];
-      periodFilter.innerHTML = `
-        ${periods.map(p => `<option value="${p}">${p}</option>`).join('')}
-        <option value="全部時期">全部時期 (All)</option>
-      `;
-      if (periods.includes(currentSelectedPeriod) || currentSelectedPeriod === '全部時期') {
-        periodFilter.value = currentSelectedPeriod;
-      }
+      periodFilter.innerHTML = periods.map(p => `<option value="${p}">${p}</option>`).join('') + `<option value="全部時期">全部時期 (All)</option>`;
+      if (periods.includes(currentSelectedPeriod) || currentSelectedPeriod === '全部時期') periodFilter.value = currentSelectedPeriod;
 
       const subjectFilter = document.getElementById('viewSubjectFilter');
       const savedSubject = localStorage.getItem('cfg_subject') || subjects[0];
       subjectFilter.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
-      if (subjects.includes(savedSubject)) {
-        subjectFilter.value = savedSubject;
-      }
+      if (subjects.includes(savedSubject)) subjectFilter.value = savedSubject;
     }
 
     // ================= 準備並執行 A4 三表列印 =================
@@ -992,25 +1065,13 @@
 
       const blocks = [];
       if (homeworkItems.length > 0) {
-        blocks.push({
-          type: 'hw',
-          title: isEnglish ? 'A. HomeWorks' : 'A. 功課',
-          rows: homeworkItems.map((item, idx) => makeRowHtml(item, idx, 'hw'))
-        });
+        blocks.push({ type: 'hw', title: isEnglish ? 'A. HomeWorks' : 'A. 功課', rows: homeworkItems.map((item, idx) => makeRowHtml(item, idx, 'hw')) });
       }
       if (quizItems.length > 0) {
-        blocks.push({
-          type: 'quiz',
-          title: isEnglish ? 'B. Quizzes' : 'B. 測驗',
-          rows: quizItems.map((item, idx) => makeRowHtml(item, idx, 'quiz'))
-        });
+        blocks.push({ type: 'quiz', title: isEnglish ? 'B. Quizzes' : 'B. 測驗', rows: quizItems.map((item, idx) => makeRowHtml(item, idx, 'quiz')) });
       }
       if (otherItems.length > 0) {
-        blocks.push({
-          type: 'other',
-          title: isEnglish ? 'C. Others' : 'C. 其他材料',
-          rows: otherItems.map((item, idx) => makeRowHtml(item, idx, 'other'))
-        });
+        blocks.push({ type: 'other', title: isEnglish ? 'C. Others' : 'C. 其他材料', rows: otherItems.map((item, idx) => makeRowHtml(item, idx, 'other')) });
       }
 
       const pages = [];
@@ -1059,7 +1120,6 @@
         pageDiv.className = 'print-page' + (pageIdx > 0 ? ' page-break' : '');
 
         let pageHtml = '';
-
         if (p.isFirst) {
           pageHtml += `
             <div class="print-title">${schoolTitle}</div>
@@ -1116,8 +1176,6 @@
 
       window.print();
     }
-
-    fetchSheetData();
   </script>
 </body>
 </html>
