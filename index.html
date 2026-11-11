@@ -26,6 +26,20 @@
       margin: 0 auto;
     }
 
+    .teacher-bar {
+      background: #1e293b;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     .card {
       background: #ffffff;
       border-radius: 8px;
@@ -145,7 +159,6 @@
       gap: 10px;
     }
 
-    /* 數字微調器控制樣式 */
     .number-stepper-box {
       display: flex;
       align-items: center;
@@ -174,9 +187,7 @@
       transition: background 0.15s;
     }
 
-    .stepper-btn:hover {
-      background: #cbd5e1;
-    }
+    .stepper-btn:hover { background: #cbd5e1; }
 
     .stepper-input {
       width: 38px;
@@ -255,14 +266,8 @@
       table-layout: fixed;
     }
 
-    .print-table thead {
-      display: table-header-group !important;
-    }
-
-    .print-table tr {
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
-    }
+    .print-table thead { display: table-header-group !important; }
+    .print-table tr { page-break-inside: avoid !important; break-inside: avoid !important; }
 
     .print-table th, .print-table td {
       border: 1px solid black !important;
@@ -280,9 +285,7 @@
       -webkit-print-color-adjust: exact;
     }
 
-    .center-col {
-      text-align: center;
-    }
+    .center-col { text-align: center; }
 
     .print-footer-block {
       page-break-inside: avoid !important;
@@ -310,23 +313,12 @@
       margin-top: 10px;
     }
 
-    @page {
-      size: A4 portrait;
-      margin: 0;
-    }
+    @page { size: A4 portrait; margin: 0; }
 
     @media print {
-      body {
-        background: white !important;
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-      .no-print {
-        display: none !important;
-      }
-      #print-area {
-        display: block !important;
-      }
+      body { background: white !important; padding: 0 !important; margin: 0 !important; }
+      .no-print { display: none !important; }
+      #print-area { display: block !important; }
     }
   </style>
 </head>
@@ -334,14 +326,25 @@
 
   <div class="container">
     <div class="no-print">
+      <!-- 👤 老師身份登入／切換頂部列 -->
+      <div class="teacher-bar">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 14.5px; font-weight: bold;">👤 目前登入老師代號：</span>
+          <input type="text" id="activeTeacherInput" style="width: 80px; text-transform: uppercase; font-weight: bold; text-align: center; font-size: 14px; padding: 4px; border-radius: 4px; border: none;" value="YTW">
+          <button class="btn-primary" onclick="changeTeacher()" style="padding: 5px 12px; font-size: 13px; background: #3b82f6;">切換身份</button>
+        </div>
+        <div style="font-size: 12.5px; color: #cbd5e1;">
+          💡 每位老師擁有各自獨立的派發材料與設定清單，資料互不干擾。
+        </div>
+      </div>
+
       <h1>📚 教學材料紀錄 及 功課測驗封面生成 <span id="statusIndicator" class="status-badge">連線中...</span></h1>
       
       <!-- 系統設定區 -->
       <details class="card">
-        <summary style="font-weight: bold; cursor: pointer; color: var(--primary);">⚙️ 系統設定（管理班別、學期階段、科目清單、材料類型）</summary>
+        <summary style="font-weight: bold; cursor: pointer; color: var(--primary);">⚙️ 系統設定（管理班別、學期階段、科目清單、材料類型） <span style="font-size: 12px; font-weight: normal; color: #64748b;">(自動存入 Google Sheet「清單」)</span></summary>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px;">
           
-          <!-- 班別清單 -->
           <div>
             <strong>🏫 班別清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -351,7 +354,6 @@
             <div id="classListTags" class="tag-container"></div>
           </div>
 
-          <!-- Period 清單 -->
           <div>
             <strong>📅 學期階段 (Period) 清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -361,7 +363,6 @@
             <div id="periodListTags" class="tag-container"></div>
           </div>
 
-          <!-- 科目清單 -->
           <div>
             <strong>📖 科目清單 (可填: 中文 / 英文)</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -371,7 +372,6 @@
             <div id="subjectListTags" class="tag-container"></div>
           </div>
 
-          <!-- 材料類型清單 -->
           <div>
             <strong>📑 材料類型清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -448,7 +448,7 @@
           </div>
         </div>
 
-        <!-- 封面語言與列印控制列 (內含數值微調控制) -->
+        <!-- 封面語言與列印控制列 -->
         <div style="background: #f1f5f9; padding: 12px 14px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div style="display: flex; gap: 15px; align-items: center;">
             <strong>🌐 封面語言：</strong>
@@ -456,7 +456,6 @@
             <label><input type="radio" name="coverLang" value="ZH" onchange="saveCoverSettings()"> 中文版</label>
           </div>
           
-          <!-- 🖨️ A4 智慧微調輸入控制框 (100% 替換拉桿) -->
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <div class="number-stepper-box">
               <span>📄 首頁上限 :</span>
@@ -507,29 +506,40 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwONa6Wyw8NU3tJS33CVQgCJe4SQ0NMDR4NRwqHbJe4jlQTvtDDNem2bzcA5okjHxhY/exec";
 
+    // 老師身份初始化 (優先讀取上次本地登入紀錄)
+    let currentTeacher = (localStorage.getItem('app_current_teacher') || "YTW").trim().toUpperCase();
+    document.getElementById('activeTeacherInput').value = currentTeacher;
+    document.getElementById('teacherInitials').value = currentTeacher;
+
     let materials = [];
     let classes = ["1A", "1B", "6B"];
     let periods = ["1st Term Test", "2nd Term Test", "模擬考試一"];
     let subjects = ["數學科 / Mathematics", "英國語文科 / English", "中國語文科 / Chinese"];
     let types = ["工作紙", "筆記", "測驗卷", "功課練習", "小測"];
 
-    document.getElementById('teacherInitials').value = localStorage.getItem('cfg_teacher') || "YTW";
     const savedLang = localStorage.getItem('cfg_lang') || "EN";
     document.querySelector(`input[name="coverLang"][value="${savedLang}"]`).checked = true;
     document.getElementById('itemDate').valueAsDate = new Date();
 
-    // 從本地快取中載入行數設定，若無則使用預設值
     let limitFirstPage = parseInt(localStorage.getItem('cfg_limit_first') || 18);
     let limitNextPage = parseInt(localStorage.getItem('cfg_limit_next') || 26);
     document.getElementById('inputFirstPage').value = limitFirstPage;
     document.getElementById('inputNextPage').value = limitNextPage;
 
-    // 按鍵微調邏輯 (首頁範圍 10~35，續頁範圍 15~45)
+    // 切換老師身份
+    function changeTeacher() {
+      const val = document.getElementById('activeTeacherInput').value.trim().toUpperCase();
+      if (!val) return alert('請輸入老師代號！');
+      currentTeacher = val;
+      localStorage.setItem('app_current_teacher', currentTeacher);
+      document.getElementById('teacherInitials').value = currentTeacher;
+      fetchSheetData();
+    }
+
     function stepValue(type, offset) {
       const inputEl = document.getElementById('input' + type);
       let val = parseInt(inputEl.value) || 0;
       val += offset;
-
       if (type === 'FirstPage') {
         if (val < 10) val = 10;
         if (val > 35) val = 35;
@@ -544,15 +554,10 @@
       inputEl.value = val;
     }
 
-    // 手動輸入框變更邏輯 (含邊界值防呆)
     function manualUpdateValue(type, rawVal) {
       const inputEl = document.getElementById('input' + type);
       let val = parseInt(rawVal);
-
-      if (isNaN(val)) {
-        val = type === 'FirstPage' ? limitFirstPage : limitNextPage;
-      }
-
+      if (isNaN(val)) val = type === 'FirstPage' ? limitFirstPage : limitNextPage;
       if (type === 'FirstPage') {
         if (val < 10) val = 10;
         if (val > 35) val = 35;
@@ -579,11 +584,12 @@
       localStorage.setItem('cfg_subject', document.getElementById('viewSubjectFilter').value);
     }
 
+    // 🎯 依據目前老師身份載入資料
     async function fetchSheetData() {
       if (!SCRIPT_URL) return setStatus("⚠️ 請設定 SCRIPT_URL", "#ef4444");
-      setStatus("🔄 同步中...", "#2563eb");
+      setStatus(`🔄 同步 [${currentTeacher}] 資料中...`, "#2563eb");
       try {
-        const response = await fetch(SCRIPT_URL, {
+        const response = await fetch(`${SCRIPT_URL}?teacher=${encodeURIComponent(currentTeacher)}`, {
           method: 'GET',
           mode: 'cors',
           redirect: 'follow'
@@ -591,24 +597,25 @@
         const data = await response.json();
         
         if (data.settings) {
-          if (data.settings.classes && data.settings.classes.length > 0) classes = data.settings.classes;
-          if (data.settings.periods && data.settings.periods.length > 0) periods = data.settings.periods;
-          if (data.settings.subjects && data.settings.subjects.length > 0) subjects = data.settings.subjects;
-          if (data.settings.types && data.settings.types.length > 0) types = data.settings.types;
+          classes = (data.settings.classes && data.settings.classes.length > 0) ? data.settings.classes : ["1A", "1B", "6B"];
+          periods = (data.settings.periods && data.settings.periods.length > 0) ? data.settings.periods : ["1st Term Test", "2nd Term Test", "模擬考試一"];
+          subjects = (data.settings.subjects && data.settings.subjects.length > 0) ? data.settings.subjects : ["數學科 / Mathematics", "英國語文科 / English", "中國語文科 / Chinese"];
+          types = (data.settings.types && data.settings.types.length > 0) ? data.settings.types : ["工作紙", "筆記", "測驗卷", "功課練習", "小測"];
         }
 
         materials = data.materials || [];
         renderSettings();
         renderTable();
-        setStatus("✅ 已同步 Google Sheet", "#16a34a");
+        setStatus(`✅ 已同步 [${currentTeacher}] 雲端資料`, "#16a34a");
       } catch (err) {
         console.error(err);
         setStatus("❌ 連線失敗 (F12)", "#ef4444");
       }
     }
 
+    // 🎯 同步儲存目前老師專屬的清單設定
     async function syncSettingsToSheet() {
-      setStatus("⏳ 儲存設定中...", "#2563eb");
+      setStatus(`⏳ 儲存 [${currentTeacher}] 設定中...`, "#2563eb");
       try {
         await fetch(SCRIPT_URL, {
           method: 'POST',
@@ -617,16 +624,18 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: "saveSettings",
+            teacher: currentTeacher,
             settings: { classes, periods, subjects, types }
           })
         });
-        setStatus("✅ 設定已同步至雲端", "#16a34a");
+        setStatus(`✅ [${currentTeacher}] 設定已同步至雲端`, "#16a34a");
       } catch (err) {
         console.error(err);
         setStatus("❌ 設定儲存失敗", "#ef4444");
       }
     }
 
+    // 新增材料 (綁定目前老師代號)
     async function addMaterial() {
       const name = document.getElementById('itemName').value.trim();
       if (!name) return alert('請填寫項目名稱！');
@@ -655,12 +664,12 @@
           mode: 'cors',
           redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "add", item: newItem })
+          body: JSON.stringify({ action: "add", teacher: currentTeacher, item: newItem })
         });
         materials.push(newItem);
         renderTable();
         document.getElementById('itemName').value = '';
-        setStatus("✅ 已儲存至雲端", "#16a34a");
+        setStatus(`✅ 已儲存至 [${currentTeacher}] 雲端`, "#16a34a");
       } catch (err) {
         alert('儲存失敗，請檢查網路連線或 Apps Script 設定');
         setStatus("❌ 儲存失敗", "#ef4444");
@@ -669,6 +678,7 @@
       }
     }
 
+    // 刪除材料
     async function deleteMaterial(id) {
       if (!confirm('確定要從雲端刪除這筆紀錄嗎？')) return;
       setStatus("⏳ 刪除中...", "#2563eb");
@@ -678,7 +688,7 @@
           mode: 'cors',
           redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "delete", id: id })
+          body: JSON.stringify({ action: "delete", teacher: currentTeacher, id: id })
         });
         materials = materials.filter(m => m.id != id);
         renderTable();
@@ -698,7 +708,7 @@
           mode: 'cors',
           redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "toggleStatus", id: id, field: "collected", value: checkbox.checked })
+          body: JSON.stringify({ action: "toggleStatus", teacher: currentTeacher, id: id, field: "collected", value: checkbox.checked })
         });
       } catch (e) { console.error("狀態同步失敗", e); }
     }
@@ -712,7 +722,7 @@
           mode: 'cors',
           redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: "toggleStatus", id: id, field: "graded", value: checkbox.checked })
+          body: JSON.stringify({ action: "toggleStatus", teacher: currentTeacher, id: id, field: "graded", value: checkbox.checked })
         });
       } catch (e) { console.error("狀態同步失敗", e); }
     }
@@ -749,7 +759,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #94a3b8;">此班別與時期暫無派發紀錄。</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #94a3b8;">[${currentTeacher}] 此班別與時期暫無派發紀錄。</td></tr>`;
         return;
       }
 
@@ -901,7 +911,7 @@
       }
     }
 
-    // ================= 準備並執行 A4 三表列印 (支援手動滑桿微調) =================
+    // ================= 準備並執行 A4 三表列印 =================
     function prepareAndPrint() {
       saveCoverSettings();
       const currentClass = document.getElementById('viewClassFilter').value;
@@ -910,7 +920,6 @@
       const teacher = document.getElementById('teacherInitials').value;
       const isEnglish = document.querySelector('input[name="coverLang"]:checked').value === "EN";
 
-      // 取得手動設定的每頁行數限制
       const MAX_FIRST_PAGE_UNITS = limitFirstPage;
       const MAX_NEXT_PAGE_UNITS = limitNextPage;
 
@@ -1012,7 +1021,7 @@
         let blockRows = [...block.rows];
         while (blockRows.length > 0) {
           const limit = currentPage.isFirst ? MAX_FIRST_PAGE_UNITS : MAX_NEXT_PAGE_UNITS;
-          const remainingUnits = limit - currentUnits - 3; // 扣除區段表頭高度
+          const remainingUnits = limit - currentUnits - 3;
 
           if (remainingUnits <= 2) {
             pages.push(currentPage);
@@ -1037,9 +1046,7 @@
         }
       });
 
-      if (currentPage.sections.length > 0) {
-        pages.push(currentPage);
-      }
+      if (currentPage.sections.length > 0) pages.push(currentPage);
 
       const printArea = document.getElementById('print-area');
       printArea.innerHTML = '';
@@ -1110,7 +1117,6 @@
       window.print();
     }
 
-    renderSettings();
     fetchSheetData();
   </script>
 </body>
