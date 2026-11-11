@@ -119,11 +119,6 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
-    h1, h2, h3 {
-      margin-top: 0;
-      color: #0f172a;
-    }
-
     .status-badge {
       display: inline-block;
       font-size: 12px;
@@ -230,6 +225,7 @@
       gap: 10px;
     }
 
+    /* 數字微調器控制樣式 */
     .number-stepper-box {
       display: flex;
       align-items: center;
@@ -270,7 +266,7 @@
       font-size: 13px;
     }
 
-    /* ================= A4 列印排版樣式 ================= */
+    /* ================= A4 智慧分頁列印專用樣式 ================= */
     #print-area {
       display: none;
       background: white;
@@ -431,11 +427,12 @@
 
       <h1>📚 教學材料紀錄 及 功課測驗封面生成 <span id="statusIndicator" class="status-badge">連線中...</span></h1>
       
-      <!-- 系統設定區 -->
+      <!-- 系統設定區 (自動同步至 Google Sheet「清單」) -->
       <details class="card">
         <summary style="font-weight: bold; cursor: pointer; color: var(--primary);">⚙️ 系統設定（管理班別、學期階段、科目清單、材料類型） <span style="font-size: 12px; font-weight: normal; color: #64748b;">(自動存入 Google Sheet「清單」)</span></summary>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px;">
           
+          <!-- 班別清單 -->
           <div>
             <strong>🏫 班別清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -445,6 +442,7 @@
             <div id="classListTags" class="tag-container"></div>
           </div>
 
+          <!-- Period 清單 -->
           <div>
             <strong>📅 學期階段 (Period) 清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -454,6 +452,7 @@
             <div id="periodListTags" class="tag-container"></div>
           </div>
 
+          <!-- 科目清單 -->
           <div>
             <strong>📖 科目清單 (可填: 中文 / 英文)</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -463,6 +462,7 @@
             <div id="subjectListTags" class="tag-container"></div>
           </div>
 
+          <!-- 材料類型清單 -->
           <div>
             <strong>📑 材料類型清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -547,6 +547,7 @@
             <label><input type="radio" name="coverLang" value="ZH" onchange="saveCoverSettings()"> 中文版</label>
           </div>
           
+          <!-- 🖨️ A4 智慧微調輸入控制框 (100% 替換拉桿) -->
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <div class="number-stepper-box">
               <span>📄 首頁上限 :</span>
@@ -597,96 +598,119 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwONa6Wyw8NU3tJS33CVQgCJe4SQ0NMDR4NRwqHbJe4jlQTvtDDNem2bzcA5okjHxhY/exec";
 
+    // 🏆 全域狀態定義
     let currentTeacher = "";
     let currentPin = "";
-
     let materials = [];
     let classes = ["1A", "1B", "6B"];
     let periods = ["1st Term Test", "2nd Term Test", "模擬考試一"];
     let subjects = ["數學科 / Mathematics", "英國語文科 / English", "中國語文科 / Chinese"];
     let types = ["工作紙", "筆記", "測驗卷", "功課練習", "小測"];
 
+    // 頁邊距排版限制變數
     let limitFirstPage = parseInt(localStorage.getItem('cfg_limit_first') || 18);
     let limitNextPage = parseInt(localStorage.getItem('cfg_limit_next') || 26);
+
+    // 💡 登入專用的狀態文字設定函數 (定義於最上方，防止 ReferenceError)
+    function setStatus(text, color = '#64748b') {
+      const badge = document.getElementById('statusIndicator');
+      if (badge) {
+        badge.innerText = text;
+        badge.style.color = color;
+      }
+    }
+
+    // 當在後台載入或切換老師時同步
     document.getElementById('inputFirstPage').value = limitFirstPage;
     document.getElementById('inputNextPage').value = limitNextPage;
 
+    // 載入儲存的老師代號 (優先加載上次設定)
+    const savedTeacher = localStorage.getItem('app_current_teacher');
+    if (savedTeacher) {
+      document.getElementById('loginTeacher').value = savedTeacher;
+    }
+
     // ================= 🔒 驗證與登入核心邏輯 =================
-   async function handleLogin() {
-  const teacherInput = document.getElementById('loginTeacher');
-  const pinInput = document.getElementById('loginPin');
-  const errorMsg = document.getElementById('loginErrorMsg');
+    async function handleLogin() {
+      const teacherInput = document.getElementById('loginTeacher');
+      const pinInput = document.getElementById('loginPin');
+      const errorMsg = document.getElementById('loginErrorMsg');
 
-  // 自動去除前後空白並轉大寫
-  const teacher = teacherInput.value.trim().toUpperCase();
-  const pin = pinInput.value.trim();
+      const teacher = teacherInput.value.trim().toUpperCase();
+      const pin = pinInput.value.trim();
 
-  if (!teacher || !pin) {
-    errorMsg.innerText = "請完整輸入老師代號與 PIN 碼！";
-    errorMsg.style.display = "block";
-    return;
-  }
+      if (!teacher || !pin) {
+        errorMsg.innerText = "請完整輸入老師代號與 PIN 碼！";
+        errorMsg.style.display = "block";
+        return;
+      }
 
-  errorMsg.style.display = "none";
-  setStatus("🔑 驗證中...", "#2563eb");
+      errorMsg.style.display = "none";
+      setStatus("🔑 驗證中...", "#2563eb");
 
-  try {
-    // 顯式加上 mode: 'cors' 與 redirect: 'follow'
-    const requestUrl = `${SCRIPT_URL}?teacher=${encodeURIComponent(teacher)}&pin=${encodeURIComponent(pin)}`;
-    const response = await fetch(requestUrl, {
-      method: 'GET',
-      mode: 'cors',
-      redirect: 'follow'
-    });
+      try {
+        const requestUrl = `${SCRIPT_URL}?teacher=${encodeURIComponent(teacher)}&pin=${encodeURIComponent(pin)}`;
+        const response = await fetch(requestUrl, {
+          method: 'GET',
+          mode: 'cors',
+          redirect: 'follow'
+        });
 
-    if (!response.ok) {
-      throw new Error(`伺服器回應狀態碼：${response.status}`);
+        if (!response.ok) {
+          throw new Error(`伺服器回應狀態碼：${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status === "auth_failed") {
+          errorMsg.innerText = data.message || "PIN 碼不正確！";
+          errorMsg.style.display = "block";
+          setStatus("❌ 驗證失敗", "#ef4444");
+          return;
+        }
+
+        if (data.status !== "success") {
+          errorMsg.innerText = data.message || "登入遭遇未預期的錯誤，請重試！";
+          errorMsg.style.display = "block";
+          setStatus("❌ 登入失敗", "#ef4444");
+          return;
+        }
+
+        // 登入成功
+        currentTeacher = teacher;
+        currentPin = pin;
+        localStorage.setItem('app_current_teacher', currentTeacher);
+
+        materials = data.materials || [];
+        
+        if (data.settings) {
+          classes = (data.settings.classes && data.settings.classes.length > 0) ? data.settings.classes : classes;
+          periods = (data.settings.periods && data.settings.periods.length > 0) ? data.settings.periods : periods;
+          subjects = (data.settings.subjects && data.settings.subjects.length > 0) ? data.settings.subjects : subjects;
+          types = (data.settings.types && data.settings.types.length > 0) ? data.settings.types : types;
+        }
+
+        // 隱藏登入遮罩，展示後台
+        document.getElementById('login-overlay').style.display = "none";
+        document.getElementById('main-content').style.display = "block";
+        document.getElementById('activeTeacherName').innerText = currentTeacher;
+        document.getElementById('teacherInitials').value = currentTeacher;
+
+        // 載入歷史語言設定
+        const savedLang = localStorage.getItem('cfg_lang') || "EN";
+        document.querySelector(`input[name="coverLang"][value="${savedLang}"]`).checked = true;
+
+        renderSettings();
+        renderTable();
+        setStatus(`✅ 歡迎登入，${currentTeacher}`, "#16a34a");
+
+      } catch (err) {
+        console.error("登入詳細報錯:", err);
+        errorMsg.innerText = "連線失敗！請檢查網路，或在 GAS 執行一次 setupDatabase 並部署新版本。";
+        errorMsg.style.display = "block";
+        setStatus("❌ 連線異常", "#ef4444");
+      }
     }
-
-    const data = await response.json();
-
-    if (data.status === "auth_failed") {
-      errorMsg.innerText = data.message || "PIN 碼不正確！";
-      errorMsg.style.display = "block";
-      setStatus("❌ 驗證失敗", "#ef4444");
-      return;
-    }
-
-    if (data.status !== "success") {
-      errorMsg.innerText = data.message || "登入遭遇未預期的錯誤，請重試！";
-      errorMsg.style.display = "block";
-      setStatus("❌ 登入失敗", "#ef4444");
-      return;
-    }
-
-    // 驗證通過，快取並顯示後台介面
-    currentTeacher = teacher;
-    currentPin = pin;
-    materials = data.materials || [];
-    
-    if (data.settings) {
-      classes = data.settings.classes || classes;
-      periods = data.settings.periods || periods;
-      subjects = data.settings.subjects || subjects;
-      types = data.settings.types || types;
-    }
-
-    document.getElementById('login-overlay').style.display = "none";
-    document.getElementById('main-content').style.display = "block";
-    document.getElementById('activeTeacherName').innerText = currentTeacher;
-    document.getElementById('teacherInitials').value = currentTeacher;
-
-    renderSettings();
-    renderTable();
-    setStatus(`✅ 歡迎登入，${currentTeacher}`, "#16a34a");
-
-  } catch (err) {
-    console.error("登入詳細報錯:", err);
-    errorMsg.innerText = "連線失敗！請按鍵盤 F12 查看 Console 錯誤訊息。";
-    errorMsg.style.display = "block";
-    setStatus("❌ 連線異常", "#ef4444");
-  }
-}
 
     function handleLogout() {
       currentTeacher = "";
@@ -697,7 +721,7 @@
       setStatus("🔒 已登出", "#64748b");
     }
 
-    // 當在後台點擊重新整理
+    // 重新整理資料
     async function fetchSheetData() {
       setStatus(`🔄 同步中...`, "#2563eb");
       try {
@@ -722,7 +746,7 @@
       }
     }
 
-    // 同步設定 (安全傳遞個人 PIN 碼供後端驗證)
+    // 同步設定至雲端
     async function syncSettingsToSheet() {
       setStatus(`⏳ 儲存設定中...`, "#2563eb");
       try {
@@ -744,7 +768,7 @@
       }
     }
 
-    // 新增材料 (安全傳遞個人 PIN 碼供後端驗證)
+    // 新增材料
     async function addMaterial() {
       const name = document.getElementById('itemName').value.trim();
       if (!name) return alert('請填寫項目名稱！');
@@ -778,7 +802,7 @@
         materials.push(newItem);
         renderTable();
         document.getElementById('itemName').value = '';
-        setStatus(`✅ 已儲存`, "#16a34a");
+        setStatus(`✅ 已儲存至雲端`, "#16a34a");
       } catch (err) {
         alert('儲存失敗');
         setStatus("❌ 儲存失敗", "#ef4444");
@@ -835,11 +859,31 @@
       } catch (e) {}
     }
 
-    // (剩餘基礎設定 Stepper 滑桿運算函數及 Table 渲染功能與先前相同...)
+    function toggleSelect(id, checkbox) {
+      const item = materials.find(m => m.id == id);
+      if (item) item.selected = checkbox.checked;
+    }
+
+    function toggleSelectAll(masterCheckbox) {
+      const currentClass = document.getElementById('viewClassFilter').value;
+      const currentPeriod = document.getElementById('viewPeriodFilter').value;
+
+      const visibleItems = materials.filter(m => {
+        const matchClass = (m.targetClass === '所有班別' || m.targetClass === currentClass);
+        const matchPeriod = (currentPeriod === '全部時期' || m.period === '全年' || m.period === currentPeriod);
+        return matchClass && matchPeriod;
+      });
+
+      visibleItems.forEach(item => item.selected = masterCheckbox.checked);
+      renderTable();
+    }
+
+    // 按鍵微調每頁列印行數
     function stepValue(type, offset) {
       const inputEl = document.getElementById('input' + type);
       let val = parseInt(inputEl.value) || 0;
       val += offset;
+
       if (type === 'FirstPage') {
         if (val < 10) val = 10;
         if (val > 35) val = 35;
@@ -872,23 +916,56 @@
       inputEl.value = val;
     }
 
-    function toggleSelect(id, checkbox) {
-      const item = materials.find(m => m.id == id);
-      if (item) item.selected = checkbox.checked;
+    // 渲染設定標籤
+    function renderSettings() {
+      document.getElementById('classListTags').innerHTML = classes.map(c => `
+        <span class="tag">${c} <span class="del" onclick="removeClass('${c}')">&times;</span></span>
+      `).join('');
+
+      document.getElementById('periodListTags').innerHTML = periods.map(p => `
+        <span class="tag">${p} <span class="del" onclick="removePeriod('${p}')">&times;</span></span>
+      `).join('');
+
+      document.getElementById('subjectListTags').innerHTML = subjects.map(s => `
+        <span class="tag">${s} <span class="del" onclick="removeSubject('${s}')">&times;</span></span>
+      `).join('');
+
+      document.getElementById('typeListTags').innerHTML = types.map(t => `
+        <span class="tag">${t} <span class="del" onclick="removeType('${t}')">&times;</span></span>
+      `).join('');
+
+      document.getElementById('itemClass').innerHTML = `
+        <option value="所有班別">✨ 所有班別通用</option>
+        ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+      `;
+
+      document.getElementById('itemPeriod').innerHTML = `
+        <option value="全年">🌟 全年 (Whole Year)</option>
+        ${periods.map(p => `<option value="${p}">${p}</option>`).join('')}
+        <option value="">無 (留空)</option>
+      `;
+
+      document.getElementById('itemType').innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
+
+      const viewFilter = document.getElementById('viewClassFilter');
+      const currentSelectedClass = viewFilter.value || classes[0];
+      viewFilter.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
+      if (classes.includes(currentSelectedClass)) viewFilter.value = currentSelectedClass;
+
+      const periodFilter = document.getElementById('viewPeriodFilter');
+      const currentSelectedPeriod = periodFilter.value || periods[0];
+      periodFilter.innerHTML = periods.map(p => `<option value="${p}">${p}</option>`).join('') + `<option value="全部時期">全部時期 (All)</option>`;
+      if (periods.includes(currentSelectedPeriod) || currentSelectedPeriod === '全部時期') periodFilter.value = currentSelectedPeriod;
+
+      const subjectFilter = document.getElementById('viewSubjectFilter');
+      const savedSubject = localStorage.getItem('cfg_subject') || subjects[0];
+      subjectFilter.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      if (subjects.includes(savedSubject)) {
+        subjectFilter.value = savedSubject;
+      }
     }
 
-    function toggleSelectAll(masterCheckbox) {
-      const currentClass = document.getElementById('viewClassFilter').value;
-      const currentPeriod = document.getElementById('viewPeriodFilter').value;
-      const visibleItems = materials.filter(m => {
-        const matchClass = (m.targetClass === '所有班別' || m.targetClass === currentClass);
-        const matchPeriod = (currentPeriod === '全部時期' || m.period === '全年' || m.period === currentPeriod);
-        return matchClass && matchPeriod;
-      });
-      visibleItems.forEach(item => item.selected = masterCheckbox.checked);
-      renderTable();
-    }
-
+    // 渲染主表格
     function renderTable() {
       const currentClass = document.getElementById('viewClassFilter').value;
       const currentPeriod = document.getElementById('viewPeriodFilter').value;
@@ -909,6 +986,7 @@
       filtered.forEach(item => {
         const tr = document.createElement('tr');
         const periodDisplay = item.period ? (item.period === '全年' ? '🌟 全年' : item.period) : '<span style="color:#94a3b8;">無</span>';
+        
         let catColor = "#2563eb";
         if (item.category === "測驗") catColor = "#dc2626";
         if (item.category === "其他") catColor = "#4b5563";
@@ -930,6 +1008,220 @@
       });
     }
 
+    // ================= 智慧多頁排版與 A4 列印引擎 =================
+    function prepareAndPrint() {
+      saveCoverSettings();
+      const currentClass = document.getElementById('viewClassFilter').value;
+      const currentPeriod = document.getElementById('viewPeriodFilter').value;
+      const rawSubject = document.getElementById('viewSubjectFilter').value;
+      const teacher = document.getElementById('teacherInitials').value;
+      const isEnglish = document.querySelector('input[name="coverLang"]:checked').value === "EN";
+
+      const MAX_FIRST_PAGE_UNITS = limitFirstPage;
+      const MAX_NEXT_PAGE_UNITS = limitNextPage;
+
+      let displaySubject = rawSubject;
+      if (rawSubject.includes('/')) {
+        const parts = rawSubject.split('/');
+        displaySubject = isEnglish ? parts[1].trim() : parts[0].trim();
+      }
+
+      const selectedItems = materials.filter(m => {
+        const matchClass = (m.targetClass === '所有班別' || m.targetClass === currentClass);
+        const matchPeriod = (currentPeriod === '全部時期' || m.period === '全年' || m.period === currentPeriod);
+        return matchClass && matchPeriod && m.selected;
+      });
+
+      if (selectedItems.length === 0) {
+        alert(`請先勾選至少一項要納入封面的材料！`);
+        return;
+      }
+
+      const displayPeriodText = (currentPeriod === '全部時期') ? (isEnglish ? 'Whole Year' : '全年度') : currentPeriod;
+
+      const homeworkItems = [];
+      const quizItems = [];
+      const otherItems = [];
+
+      selectedItems.forEach(item => {
+        const cat = item.category || '功課';
+        if (cat === '測驗') quizItems.push(item);
+        else if (cat === '其他') otherItems.push(item);
+        else homeworkItems.push(item);
+      });
+
+      // 嚴格依日期升冪排序
+      const sortByDate = (a, b) => (a.date || "").localeCompare(b.date || "");
+      homeworkItems.sort(sortByDate);
+      quizItems.sort(sortByDate);
+      otherItems.sort(sortByDate);
+
+      const formatPrintDate = (rawDate) => {
+        if (!rawDate) return "";
+        const parts = rawDate.split('-');
+        return parts.length === 3 ? `${parseInt(parts[2])}/${parseInt(parts[1])}/${parts[0]}` : rawDate;
+      };
+
+      const makeHeaderHtml = (type) => {
+        if (isEnglish) {
+          if (type === 'hw') return `<thead><tr><th style="width: 6%;">NO.</th><th style="width: 13%;">DATE</th><th style="width: 43%;">Topic (☑ if you choose Basic ver.)</th><th style="width: 13%;">Submitted (✓)<br>(by Teacher)</th><th style="width: 12%;">Marks / Grade<br>(by Student)</th><th style="width: 13%;">Correction (✓)<br>(by Teacher)</th></tr></thead>`;
+          if (type === 'quiz') return `<thead><tr><th style="width: 6%;">NO.</th><th style="width: 13%;">DATE</th><th style="width: 43%;">Topic</th><th style="width: 13%;">Tested (✓)<br>(by Teacher)</th><th style="width: 12%;">Marks / Grade<br>(by Student)</th><th style="width: 13%;">Correction (✓)<br>(by Teacher)</th></tr></thead>`;
+          return `<thead><tr><th style="width: 6%;">NO.</th><th style="width: 13%;">DATE</th><th style="width: 43%;">Topic</th><th style="width: 13%;">Checked (✓)<br>(by Teacher)</th><th style="width: 12%;">Marks / Grade<br>(by Student)</th><th style="width: 13%;">Correction (✓)<br>(by Teacher)</th></tr></thead>`;
+        } else {
+          if (type === 'hw') return `<thead><tr><th style="width: 6%;">序號</th><th style="width: 13%;">日期</th><th style="width: 43%;">課題</th><th style="width: 13%;">已遞交 (✓)<br>(老師填寫)</th><th style="width: 12%;">積分／等級<br>(學生填寫)</th><th style="width: 13%;">已改正 (✓)<br>(老師填寫)</th></tr></thead>`;
+          if (type === 'quiz') return `<thead><tr><th style="width: 6%;">序號</th><th style="width: 13%;">日期</th><th style="width: 43%;">課題</th><th style="width: 13%;">已測 (✓)<br>(老師填寫)</th><th style="width: 12%;">積分／等級<br>(學生填寫)</th><th style="width: 13%;">已改正 (✓)<br>(老師填寫)</th></tr></thead>`;
+          return `<thead><tr><th style="width: 6%;">序號</th><th style="width: 13%;">日期</th><th style="width: 43%;">課題</th><th style="width: 13%;">已查閱 (✓)<br>(老師填寫)</th><th style="width: 12%;">積分／等級<br>(學生填寫)</th><th style="width: 13%;">已改正 (✓)<br>(老師填寫)</th></tr></thead>`;
+        }
+      };
+
+      const makeRowHtml = (item, index, type) => {
+        const basicBox = (isEnglish && type === 'hw') ? ' &nbsp;<span style="font-family:sans-serif; font-size:9.5px; border:1px solid #000; padding:0 2px;">&nbsp;</span><span style="font-size:10.5px;"> Basic</span>' : '';
+        return `
+          <tr>
+            <td class="center-col">${index + 1}</td>
+            <td class="center-col">${formatPrintDate(item.date)}</td>
+            <td>${item.unit !== '-' ? item.unit + ' ' : ''}${item.name}${basicBox}</td>
+            <td class="center-col"></td>
+            <td class="center-col">/</td>
+            <td class="center-col"></td>
+          </tr>
+        `;
+      };
+
+      // 組織 A4 排版資料流塊 (Blocks)
+      const blocks = [];
+      if (homeworkItems.length > 0) {
+        blocks.push({
+          type: 'hw',
+          title: isEnglish ? 'A. HomeWorks' : 'A. 功課',
+          rows: homeworkItems.map((item, idx) => makeRowHtml(item, idx, 'hw'))
+        });
+      }
+      if (quizItems.length > 0) {
+        blocks.push({
+          type: 'quiz',
+          title: isEnglish ? 'B. Quizzes' : 'B. 測驗',
+          rows: quizItems.map((item, idx) => makeRowHtml(item, idx, 'quiz'))
+        });
+      }
+      if (otherItems.length > 0) {
+        blocks.push({
+          type: 'other',
+          title: isEnglish ? 'C. Others' : 'C. 其他材料',
+          rows: otherItems.map((item, idx) => makeRowHtml(item, idx, 'other'))
+        });
+      }
+
+      // 智慧分流分頁計算
+      const pages = [];
+      let currentPage = { isFirst: true, sections: [] };
+      let currentUnits = 0;
+
+      blocks.forEach(block => {
+        let blockRows = [...block.rows];
+        while (blockRows.length > 0) {
+          const limit = currentPage.isFirst ? MAX_FIRST_PAGE_UNITS : MAX_NEXT_PAGE_UNITS;
+          const remainingUnits = limit - currentUnits - 3;
+
+          if (remainingUnits <= 2) {
+            pages.push(currentPage);
+            currentPage = { isFirst: false, sections: [] };
+            currentUnits = 0;
+            continue;
+          }
+
+          const sliceRows = blockRows.splice(0, remainingUnits);
+          currentPage.sections.push({
+            type: block.type,
+            title: block.title + (blockRows.length > 0 && sliceRows.length < block.rows.length ? (isEnglish ? ' (Cont.)' : ' (續)') : ''),
+            rows: sliceRows
+          });
+          currentUnits += sliceRows.length + 3;
+
+          if (blockRows.length > 0) {
+            pages.push(currentPage);
+            currentPage = { isFirst: false, sections: [] };
+            currentUnits = 0;
+          }
+        }
+      });
+
+      if (currentPage.sections.length > 0) {
+        pages.push(currentPage);
+      }
+
+      // 開始繪製 A4 列印頁
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = '';
+
+      const schoolTitle = isEnglish ? "HHCKLA Buddhist Leung Chik Wai College" : "香海正覺蓮社佛教梁植偉中學";
+      const coverSubtitle = isEnglish ? "HomeWorks & Quizzes Cover Page" : "功課小測查核紀錄表";
+
+      pages.forEach((p, pageIdx) => {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'print-page' + (pageIdx > 0 ? ' page-break' : '');
+
+        let pageHtml = '';
+
+        if (p.isFirst) {
+          pageHtml += `
+            <div class="print-title">${schoolTitle}</div>
+            <div class="print-subject">${displaySubject}</div>
+            <div class="print-subtitle">${coverSubtitle}</div>
+            <div class="print-meta-row">
+              <div>${isEnglish ? 'Name : ________________________' : '姓名：________________________'}</div>
+              <div>${isEnglish ? 'Class :' : '班別：'} <span style="text-decoration: underline; font-weight: bold;">${currentClass}</span> ( _________ )</div>
+              <div>${isEnglish ? 'Period :' : '時期：'} <span style="text-decoration: underline; font-weight: bold;">${displayPeriodText}</span></div>
+            </div>
+          `;
+        } else {
+          pageHtml += `
+            <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 12px;">
+              <span style="font-weight: bold; font-size: 15px;">${coverSubtitle} ${isEnglish ? '(Continued)' : '(續頁)'}</span>
+              <span style="font-size: 13px;">${isEnglish ? 'Class' : '班別'}: <strong>${currentClass}</strong> | ${displaySubject} | ${isEnglish ? 'Period' : '時期'}: <strong>${displayPeriodText}</strong></span>
+            </div>
+          `;
+        }
+
+        p.sections.forEach(sec => {
+          pageHtml += `
+            <div class="print-section-title">${sec.title}</div>
+            <table class="print-table">
+              ${makeHeaderHtml(sec.type)}
+              <tbody>
+                ${sec.rows.join('')}
+              </tbody>
+            </table>
+          `;
+        });
+
+        // 僅在最後一頁底部附加學生核對與簽名欄
+        if (pageIdx === pages.length - 1) {
+          pageHtml += `
+            <div class="print-footer-block">
+              <div class="print-footer-options">
+                <label><input type="checkbox"> ${isEnglish ? 'Correct Order' : '已按次序排列'}</label>
+                <label><input type="checkbox"> ${isEnglish ? 'Corrections' : '已全部改正'}</label>
+              </div>
+              <div class="print-signatures">
+                <div>${isEnglish ? 'Checked by Class Teacher :' : '科任老師查核：'} ________________ (<span id="lblTeacherCode">${teacher}</span>)</div>
+              </div>
+            </div>
+          `;
+        }
+
+        pageHtml += `
+          <div class="page-number-tag">${isEnglish ? 'Page' : '第'} ${pageIdx + 1} / ${pages.length} ${isEnglish ? '' : '頁'}</div>
+        `;
+
+        pageDiv.innerHTML = pageHtml;
+        printArea.appendChild(pageDiv);
+      });
+
+      window.print();
+    }
+
+    // ================= 班別、學期、科目設定的管理與同步 =================
     function addClass() {
       const val = document.getElementById('newClassInput').value.trim();
       if (val && !classes.includes(val)) {
@@ -973,225 +1265,6 @@
     function removeType(t) {
       if (types.length <= 1) return alert('請至少保留一種材料類型');
       types = types.filter(x => x !== t); renderSettings(); syncSettingsToSheet();
-    }
-
-    function renderSettings() {
-      document.getElementById('classListTags').innerHTML = classes.map(c => `<span class="tag">${c} <span class="del" onclick="removeClass('${c}')">&times;</span></span>`).join('');
-      document.getElementById('periodListTags').innerHTML = periods.map(p => `<span class="tag">${p} <span class="del" onclick="removePeriod('${p}')">&times;</span></span>`).join('');
-      document.getElementById('subjectListTags').innerHTML = subjects.map(s => `<span class="tag">${s} <span class="del" onclick="removeSubject('${s}')">&times;</span></span>`).join('');
-      document.getElementById('typeListTags').innerHTML = types.map(t => `<span class="tag">${t} <span class="del" onclick="removeType('${t}')">&times;</span></span>`).join('');
-
-      document.getElementById('itemClass').innerHTML = `<option value="所有班別">✨ 所有班別通用</option>` + classes.map(c => `<option value="${c}">${c}</option>`).join('');
-      document.getElementById('itemPeriod').innerHTML = `<option value="全年">🌟 全年 (Whole Year)</option>` + periods.map(p => `<option value="${p}">${p}</option>`).join('') + `<option value="">無 (留空)</option>`;
-      document.getElementById('itemType').innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
-
-      const viewFilter = document.getElementById('viewClassFilter');
-      const currentSelectedClass = viewFilter.value || classes[0];
-      viewFilter.innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
-      if (classes.includes(currentSelectedClass)) viewFilter.value = currentSelectedClass;
-
-      const periodFilter = document.getElementById('viewPeriodFilter');
-      const currentSelectedPeriod = periodFilter.value || periods[0];
-      periodFilter.innerHTML = periods.map(p => `<option value="${p}">${p}</option>`).join('') + `<option value="全部時期">全部時期 (All)</option>`;
-      if (periods.includes(currentSelectedPeriod) || currentSelectedPeriod === '全部時期') periodFilter.value = currentSelectedPeriod;
-
-      const subjectFilter = document.getElementById('viewSubjectFilter');
-      const savedSubject = localStorage.getItem('cfg_subject') || subjects[0];
-      subjectFilter.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
-      if (subjects.includes(savedSubject)) subjectFilter.value = savedSubject;
-    }
-
-    // ================= 準備並執行 A4 三表列印 =================
-    function prepareAndPrint() {
-      saveCoverSettings();
-      const currentClass = document.getElementById('viewClassFilter').value;
-      const currentPeriod = document.getElementById('viewPeriodFilter').value;
-      const rawSubject = document.getElementById('viewSubjectFilter').value;
-      const teacher = document.getElementById('teacherInitials').value;
-      const isEnglish = document.querySelector('input[name="coverLang"]:checked').value === "EN";
-
-      const MAX_FIRST_PAGE_UNITS = limitFirstPage;
-      const MAX_NEXT_PAGE_UNITS = limitNextPage;
-
-      let displaySubject = rawSubject;
-      if (rawSubject.includes('/')) {
-        const parts = rawSubject.split('/');
-        displaySubject = isEnglish ? parts[1].trim() : parts[0].trim();
-      }
-
-      const selectedItems = materials.filter(m => {
-        const matchClass = (m.targetClass === '所有班別' || m.targetClass === currentClass);
-        const matchPeriod = (currentPeriod === '全部時期' || m.period === '全年' || m.period === currentPeriod);
-        return matchClass && matchPeriod && m.selected;
-      });
-
-      if (selectedItems.length === 0) {
-        alert(`請先勾選至少一項要納入封面的材料！`);
-        return;
-      }
-
-      const displayPeriodText = (currentPeriod === '全部時期') ? (isEnglish ? 'Whole Year' : '全年度') : currentPeriod;
-
-      const homeworkItems = [];
-      const quizItems = [];
-      const otherItems = [];
-
-      selectedItems.forEach(item => {
-        const cat = item.category || '功課';
-        if (cat === '測驗') quizItems.push(item);
-        else if (cat === '其他') otherItems.push(item);
-        else homeworkItems.push(item);
-      });
-
-      const sortByDate = (a, b) => (a.date || "").localeCompare(b.date || "");
-      homeworkItems.sort(sortByDate);
-      quizItems.sort(sortByDate);
-      otherItems.sort(sortByDate);
-
-      const formatPrintDate = (rawDate) => {
-        if (!rawDate) return "";
-        const parts = rawDate.split('-');
-        return parts.length === 3 ? `${parseInt(parts[2])}/${parseInt(parts[1])}/${parts[0]}` : rawDate;
-      };
-
-      const makeHeaderHtml = (type) => {
-        if (isEnglish) {
-          if (type === 'hw') return `<thead><tr><th style="width: 6%;">NO.</th><th style="width: 13%;">DATE</th><th style="width: 43%;">Topic (☑ if you choose Basic ver.)</th><th style="width: 13%;">Submitted (✓)<br>(by Teacher)</th><th style="width: 12%;">Marks / Grade<br>(by Student)</th><th style="width: 13%;">Correction (✓)<br>(by Teacher)</th></tr></thead>`;
-          if (type === 'quiz') return `<thead><tr><th style="width: 6%;">NO.</th><th style="width: 13%;">DATE</th><th style="width: 43%;">Topic</th><th style="width: 13%;">Tested (✓)<br>(by Teacher)</th><th style="width: 12%;">Marks / Grade<br>(by Student)</th><th style="width: 13%;">Correction (✓)<br>(by Teacher)</th></tr></thead>`;
-          return `<thead><tr><th style="width: 6%;">NO.</th><th style="width: 13%;">DATE</th><th style="width: 43%;">Topic</th><th style="width: 13%;">Checked (✓)<br>(by Teacher)</th><th style="width: 12%;">Marks / Grade<br>(by Student)</th><th style="width: 13%;">Correction (✓)<br>(by Teacher)</th></tr></thead>`;
-        } else {
-          if (type === 'hw') return `<thead><tr><th style="width: 6%;">序號</th><th style="width: 13%;">日期</th><th style="width: 43%;">課題</th><th style="width: 13%;">已遞交 (✓)<br>(老師填寫)</th><th style="width: 12%;">積分／等級<br>(學生填寫)</th><th style="width: 13%;">已改正 (✓)<br>(老師填寫)</th></tr></thead>`;
-          if (type === 'quiz') return `<thead><tr><th style="width: 6%;">序號</th><th style="width: 13%;">日期</th><th style="width: 43%;">課題</th><th style="width: 13%;">已測 (✓)<br>(老師填寫)</th><th style="width: 12%;">積分／等級<br>(學生填寫)</th><th style="width: 13%;">已改正 (✓)<br>(老師填寫)</th></tr></thead>`;
-          return `<thead><tr><th style="width: 6%;">序號</th><th style="width: 13%;">日期</th><th style="width: 43%;">課題</th><th style="width: 13%;">已查閱 (✓)<br>(老師填寫)</th><th style="width: 12%;">積分／等級<br>(學生填寫)</th><th style="width: 13%;">已改正 (✓)<br>(老師填寫)</th></tr></thead>`;
-        }
-      };
-
-      const makeRowHtml = (item, index, type) => {
-        const basicBox = (isEnglish && type === 'hw') ? ' &nbsp;<span style="font-family:sans-serif; font-size:9.5px; border:1px solid #000; padding:0 2px;">&nbsp;</span><span style="font-size:10.5px;"> Basic</span>' : '';
-        return `
-          <tr>
-            <td class="center-col">${index + 1}</td>
-            <td class="center-col">${formatPrintDate(item.date)}</td>
-            <td>${item.unit !== '-' ? item.unit + ' ' : ''}${item.name}${basicBox}</td>
-            <td class="center-col"></td>
-            <td class="center-col">/</td>
-            <td class="center-col"></td>
-          </tr>
-        `;
-      };
-
-      const blocks = [];
-      if (homeworkItems.length > 0) {
-        blocks.push({ type: 'hw', title: isEnglish ? 'A. HomeWorks' : 'A. 功課', rows: homeworkItems.map((item, idx) => makeRowHtml(item, idx, 'hw')) });
-      }
-      if (quizItems.length > 0) {
-        blocks.push({ type: 'quiz', title: isEnglish ? 'B. Quizzes' : 'B. 測驗', rows: quizItems.map((item, idx) => makeRowHtml(item, idx, 'quiz')) });
-      }
-      if (otherItems.length > 0) {
-        blocks.push({ type: 'other', title: isEnglish ? 'C. Others' : 'C. 其他材料', rows: otherItems.map((item, idx) => makeRowHtml(item, idx, 'other')) });
-      }
-
-      const pages = [];
-      let currentPage = { isFirst: true, sections: [] };
-      let currentUnits = 0;
-
-      blocks.forEach(block => {
-        let blockRows = [...block.rows];
-        while (blockRows.length > 0) {
-          const limit = currentPage.isFirst ? MAX_FIRST_PAGE_UNITS : MAX_NEXT_PAGE_UNITS;
-          const remainingUnits = limit - currentUnits - 3;
-
-          if (remainingUnits <= 2) {
-            pages.push(currentPage);
-            currentPage = { isFirst: false, sections: [] };
-            currentUnits = 0;
-            continue;
-          }
-
-          const sliceRows = blockRows.splice(0, remainingUnits);
-          currentPage.sections.push({
-            type: block.type,
-            title: block.title + (blockRows.length > 0 && sliceRows.length < block.rows.length ? (isEnglish ? ' (Cont.)' : ' (續)') : ''),
-            rows: sliceRows
-          });
-          currentUnits += sliceRows.length + 3;
-
-          if (blockRows.length > 0) {
-            pages.push(currentPage);
-            currentPage = { isFirst: false, sections: [] };
-            currentUnits = 0;
-          }
-        }
-      });
-
-      if (currentPage.sections.length > 0) pages.push(currentPage);
-
-      const printArea = document.getElementById('print-area');
-      printArea.innerHTML = '';
-
-      const schoolTitle = isEnglish ? "HHCKLA Buddhist Leung Chik Wai College" : "香海正覺蓮社佛教梁植偉中學";
-      const coverSubtitle = isEnglish ? "HomeWorks & Quizzes Cover Page" : "功課小測查核紀錄表";
-
-      pages.forEach((p, pageIdx) => {
-        const pageDiv = document.createElement('div');
-        pageDiv.className = 'print-page' + (pageIdx > 0 ? ' page-break' : '');
-
-        let pageHtml = '';
-        if (p.isFirst) {
-          pageHtml += `
-            <div class="print-title">${schoolTitle}</div>
-            <div class="print-subject">${displaySubject}</div>
-            <div class="print-subtitle">${coverSubtitle}</div>
-            <div class="print-meta-row">
-              <div>${isEnglish ? 'Name : ________________________' : '姓名：________________________'}</div>
-              <div>${isEnglish ? 'Class :' : '班別：'} <span style="text-decoration: underline; font-weight: bold;">${currentClass}</span> ( _________ )</div>
-              <div>${isEnglish ? 'Period :' : '時期：'} <span style="text-decoration: underline; font-weight: bold;">${displayPeriodText}</span></div>
-            </div>
-          `;
-        } else {
-          pageHtml += `
-            <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid black; padding-bottom: 4px; margin-bottom: 12px;">
-              <span style="font-weight: bold; font-size: 15px;">${coverSubtitle} ${isEnglish ? '(Continued)' : '(續頁)'}</span>
-              <span style="font-size: 13px;">${isEnglish ? 'Class' : '班別'}: <strong>${currentClass}</strong> | ${displaySubject} | ${isEnglish ? 'Period' : '時期'}: <strong>${displayPeriodText}</strong></span>
-            </div>
-          `;
-        }
-
-        p.sections.forEach(sec => {
-          pageHtml += `
-            <div class="print-section-title">${sec.title}</div>
-            <table class="print-table">
-              ${makeHeaderHtml(sec.type)}
-              <tbody>
-                ${sec.rows.join('')}
-              </tbody>
-            </table>
-          `;
-        });
-
-        if (pageIdx === pages.length - 1) {
-          pageHtml += `
-            <div class="print-footer-block">
-              <div class="print-footer-options">
-                <label><input type="checkbox"> ${isEnglish ? 'Correct Order' : '已按次序排列'}</label>
-                <label><input type="checkbox"> ${isEnglish ? 'Corrections' : '已全部改正'}</label>
-              </div>
-              <div class="print-signatures">
-                <div>${isEnglish ? 'Checked by Class Teacher :' : '科任老師查核：'} ________________ (<span id="lblTeacherCode">${teacher}</span>)</div>
-              </div>
-            </div>
-          `;
-        }
-
-        pageHtml += `
-          <div class="page-number-tag">${isEnglish ? 'Page' : '第'} ${pageIdx + 1} / ${pages.length} ${isEnglish ? '' : '頁'}</div>
-        `;
-
-        pageDiv.innerHTML = pageHtml;
-        printArea.appendChild(pageDiv);
-      });
-
-      window.print();
     }
   </script>
 </body>
