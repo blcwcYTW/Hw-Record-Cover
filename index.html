@@ -13,6 +13,13 @@
       --tag-bg: #e2e8f0;
     }
 
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f1f5f9;
+      color: #1e293b;
+    }
 
     .container {
       max-width: 1160px;
@@ -1412,7 +1419,17 @@
           `;
         }
 
-
+        p.sections.forEach(sec => {
+          pageHtml += `
+            <div class="print-section-title">${sec.title}</div>
+            <table class="print-table">
+              ${makeHeaderHtml(sec.type)}
+              <tbody>
+                ${sec.rows.join('')}
+              </tbody>
+            </table>
+          `;
+        });
 
         if (pageIdx === pages.length - 1) {
           pageHtml += `
