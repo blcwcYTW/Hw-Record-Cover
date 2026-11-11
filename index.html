@@ -26,7 +26,7 @@
       margin: 0 auto;
     }
 
-    /* 🔒 全新登入與註冊頁面遮罩 */
+    /* 🔒 全新登入、註冊與變更 PIN 遮罩 */
     #login-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -39,10 +39,10 @@
 
     .login-card {
       background: white;
-      padding: 30px 35px;
+      padding: 28px 32px;
       border-radius: 12px;
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.25);
     }
 
@@ -55,14 +55,15 @@
     .tab-btn {
       flex: 1;
       background: none;
-      padding: 10px;
-      font-size: 15px;
+      padding: 9px 4px;
+      font-size: 14px;
       font-weight: bold;
       color: #64748b;
       cursor: pointer;
       border: none;
       border-bottom: 2px solid transparent;
       transition: all 0.2s;
+      text-align: center;
     }
 
     .tab-btn.active {
@@ -74,7 +75,7 @@
       display: flex;
       flex-direction: column;
       text-align: left;
-      margin-bottom: 15px;
+      margin-bottom: 14px;
     }
 
     .login-field label {
@@ -132,7 +133,7 @@
       display: none;
     }
 
-    /* 頂部導航與管理區 */
+    /* 頂部管理區 */
     .teacher-bar {
       background: #1e293b;
       color: white;
@@ -208,7 +209,6 @@
     .btn-primary:hover { background: var(--primary-hover); }
     .btn-danger { background: #ef4444; color: #fff; padding: 4px 7px; font-size: 12px; }
 
-    /* 快捷組裝器卡片樣式 */
     .quick-box {
       background: #f8fafc;
       border: 1px dashed #cbd5e1;
@@ -313,7 +313,7 @@
       font-size: 13px;
     }
 
-    /* ================= A4 列印專用樣式 ================= */
+    /* ================= A4 列印樣式 ================= */
     #print-area {
       display: none;
       background: white;
@@ -438,12 +438,13 @@
 </head>
 <body>
 
-  <!-- 🔒 安全登入 / 註冊 頁面遮罩 -->
+  <!-- 🔒 登入 / 註冊 / 變更 PIN 彈窗 -->
   <div id="login-overlay">
     <div class="login-card">
       <div class="tab-header">
         <button id="tab-login" class="tab-btn active" onclick="switchTab('login')">教師登入</button>
-        <button id="tab-register" class="tab-btn" onclick="switchTab('register')">註冊新帳號</button>
+        <button id="tab-register" class="tab-btn" onclick="switchTab('register')">註冊帳號</button>
+        <button id="tab-changePin" class="tab-btn" onclick="switchTab('changePin')">變更 PIN</button>
       </div>
 
       <h2 id="login-title" style="font-size: 18px; margin-bottom: 15px;">🏫 教師登入</h2>
@@ -453,6 +454,12 @@
         <input type="text" id="loginTeacher" class="login-input" placeholder="YTW" style="text-transform: uppercase;">
       </div>
       
+      <!-- 舊 PIN (僅在變更 PIN 模式顯示) -->
+      <div class="login-field" id="oldPinField" style="display: none;">
+        <label for="loginOldPin">原安全 PIN 碼 (舊密碼)</label>
+        <input type="password" id="loginOldPin" class="login-input" placeholder="••••">
+      </div>
+
       <div class="login-field">
         <label for="loginPin" id="pinLabel">個人安全 PIN 碼</label>
         <input type="password" id="loginPin" class="login-input" placeholder="••••">
@@ -467,7 +474,7 @@
 
   <div class="container" id="main-content" style="display: none;">
     <div class="no-print">
-      <!-- 頂部登入狀態列 -->
+      <!-- 頂部資訊列 -->
       <div class="teacher-bar">
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 14.5px; font-weight: bold;">👤 目前登入老師：</span>
@@ -478,19 +485,18 @@
 
       <h1>📚 教學材料紀錄 及 功課測驗封面生成 <span id="statusIndicator" class="status-badge">連線中...</span></h1>
       
-      <!-- 系統設定區：含自訂與快捷按鍵 -->
+      <!-- 系統設定區 -->
       <details class="card" open>
         <summary style="font-weight: bold; cursor: pointer; color: var(--primary);">⚙️ 系統設定（管理班別、學期階段、科目清單、材料類型） <span style="font-size: 12px; font-weight: normal; color: #64748b;">(自動存入 Google Sheet「清單」)</span></summary>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px;">
           
-          <!-- 1. 班別清單 -->
+          <!-- 1. 班別清單 (無預設) -->
           <div>
             <strong>🏫 班別清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
               <input type="text" id="newClassInput" placeholder="自行輸入" style="flex: 1;">
               <button class="btn-primary" onclick="addClass()">新增</button>
             </div>
-            <!-- 快捷組裝 (3下拉) -->
             <div class="quick-box">
               <span class="quick-title">⚡ 快捷組合班別：</span>
               <div style="display: flex; gap: 4px; align-items: center;">
@@ -511,14 +517,13 @@
             <div id="classListTags" class="tag-container"></div>
           </div>
 
-          <!-- 2. 學期階段清單 -->
+          <!-- 2. 學期階段清單 (新註冊預設全組合) -->
           <div>
             <strong>📅 學期階段 (Period) 清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
               <input type="text" id="newPeriodInput" placeholder="自行輸入" style="flex: 1;">
               <button class="btn-primary" onclick="addPeriod()">新增</button>
             </div>
-            <!-- 快捷組裝 (2下拉) -->
             <div class="quick-box">
               <span class="quick-title">⚡ 快捷組合學期階段：</span>
               <div style="display: flex; gap: 4px; align-items: center;">
@@ -536,14 +541,13 @@
             <div id="periodListTags" class="tag-container"></div>
           </div>
 
-          <!-- 3. 科目清單 -->
+          <!-- 3. 科目清單 (無預設) -->
           <div>
             <strong>📖 科目清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
               <input type="text" id="newSubjectInput" placeholder="自行輸入 (中/英)" style="flex: 1;">
               <button class="btn-primary" onclick="addSubject()">新增</button>
             </div>
-            <!-- 快捷選取 (1下拉) -->
             <div class="quick-box">
               <span class="quick-title">⚡ 快捷選取常用科目：</span>
               <div style="display: flex; gap: 4px; align-items: center;">
@@ -558,14 +562,13 @@
             <div id="subjectListTags" class="tag-container"></div>
           </div>
 
-          <!-- 4. 材料類型清單 -->
+          <!-- 4. 材料類型清單 (新註冊預設全元素) -->
           <div>
             <strong>📑 材料類型清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
               <input type="text" id="newTypeInput" placeholder="自行輸入" style="flex: 1;">
               <button class="btn-primary" onclick="addType()">新增</button>
             </div>
-            <!-- 快捷選取 (1下拉) -->
             <div class="quick-box">
               <span class="quick-title">⚡ 快捷選取常用材料類型：</span>
               <div style="display: flex; gap: 4px; align-items: center;">
@@ -713,7 +716,7 @@
 
     let currentTeacher = "";
     let currentPin = "";
-    let authMode = "login";
+    let authMode = "login"; // "login", "register", "changePin"
 
     let materials = [];
     let classes = [];
@@ -740,7 +743,7 @@
       document.getElementById('loginTeacher').value = savedTeacher;
     }
 
-    // --- 切換登入 / 註冊分頁 ---
+    // --- 切換 登入 / 註冊 / 變更 PIN 標籤 ---
     function switchTab(mode) {
       authMode = mode;
       document.getElementById('loginErrorMsg').style.display = "none";
@@ -748,32 +751,56 @@
 
       document.getElementById('tab-login').classList.remove('active');
       document.getElementById('tab-register').classList.remove('active');
+      document.getElementById('tab-changePin').classList.remove('active');
       document.getElementById('tab-' + mode).classList.add('active');
+
+      const oldPinField = document.getElementById('oldPinField');
 
       if (mode === "login") {
         document.getElementById('login-title').innerText = "🏫 教師登入";
         document.getElementById('pinLabel').innerText = "個人安全 PIN 碼";
         document.getElementById('submitBtn').innerText = "驗證登入";
-      } else {
-        document.getElementById('login-title').innerText = "🔑 註冊新帳號 (全新開始)";
+        oldPinField.style.display = "none";
+      } else if (mode === "register") {
+        document.getElementById('login-title').innerText = "🔑 註冊新帳號";
         document.getElementById('pinLabel').innerText = "自訂安全 PIN 碼";
         document.getElementById('submitBtn').innerText = "註冊並初始化";
+        oldPinField.style.display = "none";
+      } else if (mode === "changePin") {
+        document.getElementById('login-title').innerText = "🔄 變更個人 PIN 碼";
+        document.getElementById('pinLabel').innerText = "設定新 PIN 碼";
+        document.getElementById('submitBtn').innerText = "確認變更 PIN 碼";
+        oldPinField.style.display = "flex";
       }
     }
 
-    // ================= 🔒 登入 / 註冊 驗證 =================
+    // ================= 🔒 驗證 / 註冊 / 變更 PIN 核心邏輯 =================
     async function handleAuthSubmit() {
       const teacherInput = document.getElementById('loginTeacher');
       const pinInput = document.getElementById('loginPin');
+      const oldPinInput = document.getElementById('loginOldPin');
       const errorMsg = document.getElementById('loginErrorMsg');
       const loadingNotice = document.getElementById('authLoadingMsg');
       const submitBtn = document.getElementById('submitBtn');
 
       const teacher = teacherInput.value.trim().toUpperCase();
       const pin = pinInput.value.trim();
+      const oldPin = oldPinInput.value.trim();
 
-      if (!teacher || !pin) {
-        errorMsg.innerText = "請完整填寫代號與 PIN 碼！";
+      if (!teacher) {
+        errorMsg.innerText = "請輸入老師英文代號！";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      if (authMode === "changePin" && (!oldPin || !pin)) {
+        errorMsg.innerText = "請完整輸入舊 PIN 碼與新 PIN 碼！";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      if (authMode !== "changePin" && !pin) {
+        errorMsg.innerText = "請輸入 PIN 碼！";
         errorMsg.style.display = "block";
         return;
       }
@@ -781,17 +808,20 @@
       errorMsg.style.display = "none";
       submitBtn.disabled = true;
 
-      // 依動作呈現「登入中...」或「註冊中...」
-      if (authMode === "login") {
-        loadingNotice.innerText = "⏳ 登入中，請稍候...";
-      } else {
-        loadingNotice.innerText = "⏳ 註冊中，請稍候...";
-      }
+      if (authMode === "login") loadingNotice.innerText = "⏳ 登入中，請稍候...";
+      else if (authMode === "register") loadingNotice.innerText = "⏳ 註冊中，請稍候...";
+      else if (authMode === "changePin") loadingNotice.innerText = "⏳ 變更中，請稍候...";
       loadingNotice.style.display = "block";
       setStatus("🔑 處理中...", "#2563eb");
 
       try {
-        const requestUrl = `${SCRIPT_URL}?action=${authMode}&teacher=${encodeURIComponent(teacher)}&pin=${encodeURIComponent(pin)}`;
+        let requestUrl = "";
+        if (authMode === "changePin") {
+          requestUrl = `${SCRIPT_URL}?action=changePin&teacher=${encodeURIComponent(teacher)}&oldPin=${encodeURIComponent(oldPin)}&newPin=${encodeURIComponent(pin)}`;
+        } else {
+          requestUrl = `${SCRIPT_URL}?action=${authMode}&teacher=${encodeURIComponent(teacher)}&pin=${encodeURIComponent(pin)}`;
+        }
+
         const response = await fetch(requestUrl, {
           method: 'GET',
           mode: 'cors',
@@ -801,10 +831,25 @@
         if (!response.ok) throw new Error(`連線代號: ${response.status}`);
         const data = await response.json();
 
-        // 註冊反饋
+        // 1. 變更 PIN 碼反饋
+        if (authMode === "changePin") {
+          if (data.status === "success") {
+            alert("🎉 " + data.message);
+            document.getElementById('loginOldPin').value = "";
+            document.getElementById('loginPin').value = "";
+            switchTab('login');
+          } else {
+            errorMsg.innerText = data.message || "變更失敗！";
+            errorMsg.style.display = "block";
+          }
+          setStatus("ℹ️ PIN 碼操作完畢", "#64748b");
+          return;
+        }
+
+        // 2. 註冊反饋
         if (authMode === "register") {
           if (data.status === "success") {
-            alert("🎉 註冊成功！系統已完成專屬帳戶初始化，請切換至「教師登入」頁面登入。");
+            alert("🎉 註冊成功！學期階段與材料類型已自動為您預設齊備，現在請切換至「教師登入」頁面。");
             switchTab('login');
           } else {
             errorMsg.innerText = data.message || "註冊失敗，請確認該代號是否已被使用。";
@@ -814,7 +859,7 @@
           return;
         }
 
-        // 登入反饋
+        // 3. 登入反饋
         if (data.status === "auth_failed") {
           errorMsg.innerText = data.message || "PIN 碼錯誤！";
           errorMsg.style.display = "block";
@@ -856,7 +901,7 @@
 
       } catch (err) {
         console.error("驗證詳細錯誤:", err);
-        errorMsg.innerText = "連線失敗！請檢查網路，或在 GAS 執行一次 setupDatabase 並部署新版本。";
+        errorMsg.innerText = "連線失敗！請確認 SCRIPT_URL 設定無誤且 GAS 部署正常。";
         errorMsg.style.display = "block";
         setStatus("❌ 連線失敗", "#ef4444");
       } finally {
@@ -869,6 +914,7 @@
       currentTeacher = "";
       currentPin = "";
       document.getElementById('loginPin').value = "";
+      document.getElementById('loginOldPin').value = "";
       document.getElementById('main-content').style.display = "none";
       document.getElementById('login-overlay').style.display = "flex";
       setStatus("🔒 已登出", "#64748b");
@@ -925,8 +971,7 @@
       }
     }
 
-    // ================= ⚡ 快捷選取組裝邏輯 =================
-    // 1. 班別快捷組裝 (級別 + 班名 + 組別)
+    // 快捷組裝按鍵邏輯
     function quickAddClass() {
       const g = document.getElementById('qcGrade').value;
       const c = document.getElementById('qcClass').value;
@@ -939,7 +984,6 @@
       }
     }
 
-    // 2. 學期階段快捷組裝 (學期 + 評估類型)
     function quickAddPeriod() {
       const t = document.getElementById('qpTerm').value;
       const type = document.getElementById('qpType').value;
@@ -951,7 +995,6 @@
       }
     }
 
-    // 3. 科目快捷新增
     function quickAddSubject() {
       const s = document.getElementById('qsSubject').value;
       if (!subjects.includes(s)) {
@@ -961,7 +1004,6 @@
       }
     }
 
-    // 4. 材料類型快捷新增
     function quickAddType() {
       const tp = document.getElementById('qtType').value;
       if (!types.includes(tp)) {
@@ -971,7 +1013,6 @@
       }
     }
 
-    // 自行輸入的新增函式
     function addClass() {
       const val = document.getElementById('newClassInput').value.trim();
       if (val && !classes.includes(val)) {
@@ -1013,7 +1054,6 @@
       types = types.filter(x => x !== t); renderSettings(); syncSettingsToSheet();
     }
 
-    // 渲染設定清單標籤與下拉選單
     function renderSettings() {
       document.getElementById('classListTags').innerHTML = classes.map(c => `<span class="tag">${c} <span class="del" onclick="removeClass('${c}')">&times;</span></span>`).join('');
       document.getElementById('periodListTags').innerHTML = periods.map(p => `<span class="tag">${p} <span class="del" onclick="removePeriod('${p}')">&times;</span></span>`).join('');
@@ -1040,7 +1080,6 @@
       if (subjects.includes(savedSubject)) subjectFilter.value = savedSubject;
     }
 
-    // 新增材料
     async function addMaterial() {
       const name = document.getElementById('itemName').value.trim();
       if (!name) return alert('請填寫項目名稱！');
