@@ -612,64 +612,81 @@
     document.getElementById('inputNextPage').value = limitNextPage;
 
     // ================= 🔒 驗證與登入核心邏輯 =================
-    async function handleLogin() {
-      const teacher = document.getElementById('loginTeacher').value.trim().toUpperCase();
-      const pin = document.getElementById('loginPin').value.trim();
-      const errorMsg = document.getElementById('loginErrorMsg');
+   async function handleLogin() {
+  const teacherInput = document.getElementById('loginTeacher');
+  const pinInput = document.getElementById('loginPin');
+  const errorMsg = document.getElementById('loginErrorMsg');
 
-      if (!teacher || !pin) {
-        errorMsg.innerText = "請完整填寫代號與 PIN 碼！";
-        errorMsg.style.display = "block";
-        return;
-      }
+  // 自動去除前後空白並轉大寫
+  const teacher = teacherInput.value.trim().toUpperCase();
+  const pin = pinInput.value.trim();
 
-      errorMsg.style.display = "none";
-      setStatus("🔑 驗證中...", "#2563eb");
+  if (!teacher || !pin) {
+    errorMsg.innerText = "請完整輸入老師代號與 PIN 碼！";
+    errorMsg.style.display = "block";
+    return;
+  }
 
-      try {
-        const response = await fetch(`${SCRIPT_URL}?teacher=${encodeURIComponent(teacher)}&pin=${encodeURIComponent(pin)}`, {
-          method: 'GET',
-          mode: 'cors',
-          redirect: 'follow'
-        });
-        const data = await response.json();
+  errorMsg.style.display = "none";
+  setStatus("🔑 驗證中...", "#2563eb");
 
-        if (data.status === "auth_failed") {
-          errorMsg.innerText = data.message;
-          errorMsg.style.display = "block";
-          setStatus("❌ 驗證失敗", "#ef4444");
-          return;
-        }
+  try {
+    // 顯式加上 mode: 'cors' 與 redirect: 'follow'
+    const requestUrl = `${SCRIPT_URL}?teacher=${encodeURIComponent(teacher)}&pin=${encodeURIComponent(pin)}`;
+    const response = await fetch(requestUrl, {
+      method: 'GET',
+      mode: 'cors',
+      redirect: 'follow'
+    });
 
-        // 登入成功，快取密鑰並展示介面
-        currentTeacher = teacher;
-        currentPin = pin;
-        materials = data.materials || [];
-        
-        if (data.settings) {
-          classes = data.settings.classes || classes;
-          periods = data.settings.periods || periods;
-          subjects = data.settings.subjects || subjects;
-          types = data.settings.types || types;
-        }
-
-        // 切換介面顯示
-        document.getElementById('login-overlay').style.display = "none";
-        document.getElementById('main-content').style.display = "block";
-        document.getElementById('activeTeacherName').innerText = currentTeacher;
-        document.getElementById('teacherInitials').value = currentTeacher;
-
-        renderSettings();
-        renderTable();
-        setStatus(`✅ 歡迎登入，${currentTeacher}`, "#16a34a");
-
-      } catch (err) {
-        console.error(err);
-        errorMsg.innerText = "連線失敗，請確認 Apps Script 部署與權限！";
-        errorMsg.style.display = "block";
-        setStatus("❌ 連線異常", "#ef4444");
-      }
+    if (!response.ok) {
+      throw new Error(`伺服器回應狀態碼：${response.status}`);
     }
+
+    const data = await response.json();
+
+    if (data.status === "auth_failed") {
+      errorMsg.innerText = data.message || "PIN 碼不正確！";
+      errorMsg.style.display = "block";
+      setStatus("❌ 驗證失敗", "#ef4444");
+      return;
+    }
+
+    if (data.status !== "success") {
+      errorMsg.innerText = data.message || "登入遭遇未預期的錯誤，請重試！";
+      errorMsg.style.display = "block";
+      setStatus("❌ 登入失敗", "#ef4444");
+      return;
+    }
+
+    // 驗證通過，快取並顯示後台介面
+    currentTeacher = teacher;
+    currentPin = pin;
+    materials = data.materials || [];
+    
+    if (data.settings) {
+      classes = data.settings.classes || classes;
+      periods = data.settings.periods || periods;
+      subjects = data.settings.subjects || subjects;
+      types = data.settings.types || types;
+    }
+
+    document.getElementById('login-overlay').style.display = "none";
+    document.getElementById('main-content').style.display = "block";
+    document.getElementById('activeTeacherName').innerText = currentTeacher;
+    document.getElementById('teacherInitials').value = currentTeacher;
+
+    renderSettings();
+    renderTable();
+    setStatus(`✅ 歡迎登入，${currentTeacher}`, "#16a34a");
+
+  } catch (err) {
+    console.error("登入詳細報錯:", err);
+    errorMsg.innerText = "連線失敗！請按鍵盤 F12 查看 Console 錯誤訊息。";
+    errorMsg.style.display = "block";
+    setStatus("❌ 連線異常", "#ef4444");
+  }
+}
 
     function handleLogout() {
       currentTeacher = "";
