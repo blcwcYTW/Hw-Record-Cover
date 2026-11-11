@@ -313,7 +313,7 @@
       font-size: 13px;
     }
 
-    /* ================= A4 列印樣式 ================= */
+    /* ================= A4 列印排版樣式 ================= */
     #print-area {
       display: none;
       background: white;
@@ -457,12 +457,12 @@
       <!-- 舊 PIN (僅在變更 PIN 模式顯示) -->
       <div class="login-field" id="oldPinField" style="display: none;">
         <label for="loginOldPin">原安全 PIN 碼 (舊密碼)</label>
-        <input type="password" id="loginOldPin" class="login-input" placeholder="••••">
+        <input type="text" inputmode="numeric" id="loginOldPin" class="login-input" placeholder="••••">
       </div>
 
       <div class="login-field">
         <label for="loginPin" id="pinLabel">個人安全 PIN 碼</label>
-        <input type="password" id="loginPin" class="login-input" placeholder="••••">
+        <input type="text" inputmode="numeric" id="loginPin" class="login-input" placeholder="••••">
       </div>
       
       <div id="loginErrorMsg" class="error-box"></div>
@@ -517,7 +517,7 @@
             <div id="classListTags" class="tag-container"></div>
           </div>
 
-          <!-- 2. 學期階段清單 (新註冊預設全組合) -->
+          <!-- 2. 學期階段清單 -->
           <div>
             <strong>📅 學期階段 (Period) 清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -562,7 +562,7 @@
             <div id="subjectListTags" class="tag-container"></div>
           </div>
 
-          <!-- 4. 材料類型清單 (新註冊預設全元素) -->
+          <!-- 4. 材料類型清單 -->
           <div>
             <strong>📑 材料類型清單</strong>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -657,7 +657,7 @@
         </div>
 
         <!-- 封面語言與列印控制列 -->
-        <div style="background: #f1f5f9; padding: 12px 14px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="background: #f1f5f9; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div style="display: flex; gap: 15px; align-items: center;">
             <strong>🌐 封面語言：</strong>
             <label><input type="radio" name="coverLang" value="EN" checked onchange="saveCoverSettings()"> 英文版</label>
